@@ -1,0 +1,15 @@
+<nav class="navbar navbar-dark bg-dark navbar-static-top">
+  <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">Condivisione</a>
+    {% if user %}
+        <p class="navbar-text">
+          Accesso eseguito come {{user}}
+        </p>
+        <a href="/" class="btn btn-danger navbar-btn">Logout</a>
+    {% else %}
+          <p class="navbar-text">
+            Accesso non eseguito
+          </p>
+    {% endif %}
+  </div>
+</nav>

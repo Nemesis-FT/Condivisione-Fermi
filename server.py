@@ -99,6 +99,57 @@ class Impegno(db.Model):
         self.stud_id = stud_id
         self.mat_id = mat_id
 
+
+"""Funzioni del sito"""
+
+
+def login(username, password):
+    user = User.query.filter_by(username=username).first()
+    try:
+        return bcrypt.checkpw(bytes(password, encoding="utf-8"), user.passwd)
+    except AttributeError:
+        # Se non esiste l'Utente
+        return False
+
+
+"""Sito"""
+
+
+@app.route('/')
+def page_home():
+    if 'username' not in session:
+        return redirect(url_for('page_login'))
+    else:
+        session.pop('username')
+        return redirect(url_for('page_login'))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def page_login():
+    if request.method == 'GET':
+        css = url_for("static", filename="style.css")
+        return render_template("login.htm", css=css)
+    else:
+        if login(request.form['username'], request.form['password']):
+            session['username'] = request.form['username']
+            return redirect(url_for('page_dashboard', user=session['username']))
+        else:
+            abort(403)
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def page_register():
+    if request.method == 'GET':
+        return render_template("User/add.htm")
+    else:
+        p = bytes(request.form["passwd"], encoding="utf-8")
+        cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+        nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'], request.form['classe'], 1, request.form['telegram_username'])
+        db.session.add(nuovouser)
+        db.session.commit()
+        return redirect(url_for('page_login'))
+
+
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
     if not os.path.isfile("data.db"):
