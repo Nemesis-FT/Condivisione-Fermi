@@ -37,7 +37,7 @@ class User(db.Model):
     corsi = db.relationship("Corso")
     materie = db.relationship("Materia", secondary=materieutenti_table)
 
-    def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username, materie):
+    def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username):
         self.username = username
         self.passwd = passwd
         self.nome = nome
@@ -46,7 +46,6 @@ class User(db.Model):
         self.notifiche = 0
         self.tipo = tipo
         self.telegram_username = telegram_username
-        self.materie = materie
 
     def __repr__(self):
         return "<User {}>".format(self.username, self.passwd, self.nome, self.cognome, self.classe)
@@ -112,6 +111,13 @@ def login(username, password):
         return False
 
 
+def find_user(username):
+    user = User.query.all()
+    for utenze in user:
+        if username == utenze.username:
+            return utenze
+
+
 """Sito"""
 
 
@@ -132,7 +138,7 @@ def page_login():
     else:
         if login(request.form['username'], request.form['password']):
             session['username'] = request.form['username']
-            return redirect(url_for('page_dashboard', user=session['username']))
+            return redirect(url_for('page_dashboard'))
         else:
             abort(403)
 
@@ -142,12 +148,22 @@ def page_register():
     if request.method == 'GET':
         return render_template("User/add.htm")
     else:
-        p = bytes(request.form["passwd"], encoding="utf-8")
+        p = bytes(request.form["password"], encoding="utf-8")
         cenere = bcrypt.hashpw(p, bcrypt.gensalt())
-        nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'], request.form['classe'], 1, request.form['telegram_username'])
+        nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
+                         request.form['classe'], 0, request.form['usernameTelegram'])
         db.session.add(nuovouser)
         db.session.commit()
         return redirect(url_for('page_login'))
+
+
+@app.route('/dashboard')
+def page_dashboard():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        return render_template("dashboard.htm", utente=utente)
 
 
 if __name__ == "__main__":

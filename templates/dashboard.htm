@@ -1,0 +1,13 @@
+{% extends "stampo.htm" %}
+{% block title %}Dashboard - Condivisione{% endblock %}
+{% block content %}
+<div class="jumbotron">
+  <h1 class="display-3">{% if utente.tipo == 0 %}Ciao, {{ utente.nome }}!{% elif utente.tipo == 1 %} Ciao, peer {{ utente.nome }}! {% elif utente.tipo == 2 %}Salve, Admin {{ utente.cognome }}.{% endif %}</h1>
+  <p class="lead">Ti diamo il benvenuto nella tua dashboard!</p>
+  <hr class="my-4">
+  <p>{% if utente.tipo == 0 %}In questa pagina potrai esplorare i corsi sulla piattaforma, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 1 %}In questa pagina potrai esplorare e creare corsi, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 2 %}Da questa pagina le sarà possibile abilitare gli utenti all'insegnamento, controllare i corsi ed eliminare utenti.{% endif %}</p>
+  <p class="lead">
+
+  </p>
+</div>
+{% endblock %}
