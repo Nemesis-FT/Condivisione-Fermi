@@ -28,20 +28,20 @@
                         <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne"
                              data-parent="#accordion">
                             <div class="card-body">
-                                <div class="row">
                                 {% for messaggio in messaggi %}
-                                        <div class="col-md-10">
-                                            <div class="alert alert-{% if messaggio.tipo == 1 %}success{% elif messaggio.tipo == 2 %}primary{% elif messaggio.tipo == 3 %}danger{% endif %}" role="alert">
+                                    <div class="alert alert-{% if messaggio.tipo == 1 %}success{% elif messaggio.tipo == 2 %}primary{% elif messaggio.tipo == 3 %}danger{% endif %}" role="alert">
+                                        <div class="row">
+                                            <div class="col-md-11">
                                                 {{ messaggio.testo }}<br>{{ messaggio.data }}
                                             </div>
+                                            <div class="col-md-1">
+                                                {% if utente.tipo == 2 %}
+                                                    <a href="/message_del/{{ messaggio.mid }}" class="alert-link"><i class="fa fa-times" aria-hidden="true"></i></a>
+                                                {% endif %}
+                                            </div>
                                         </div>
-                                        <div class="col-md-2">
-                                            {% if utente.tipo == 2 %}
-                                            <a href="/message_del/{{ messaggio.mid }}">Elimina</a>
-                                            {% endif %}
-                                        </div>
+                                    </div>
                                 {% endfor %}
-                                </div>
                             </div>
                         </div>
                     </div>
