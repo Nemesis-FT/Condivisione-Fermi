@@ -12,14 +12,14 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
-"""Tabelle associative"""
+# Tabelle associative
 
 
 materiecorsi_table = db.Table('materiecorsi', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('corso_id', db.Integer, db.ForeignKey('corso.cid')))
 materieutenti_table = db.Table('materieutenti', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('user_id', db.Integer, db.ForeignKey('user.uid')))
 
 
-"""Seguono le classi del database"""
+# Classi
 
 
 class User(db.Model):
@@ -32,7 +32,7 @@ class User(db.Model):
     classe = db.Column(db.String)
     notifiche = db.Column(db.Integer)
     tipo = db.Column(db.Integer)
-    """0 = utente normale, 1 = peer, 2 = amministratore"""
+    # 0 = utente normale, 1 = peer, 2 = amministratore
     telegram_username = db.Column(db.String)
     corsi = db.relationship("Corso")
     materie = db.relationship("Materia", secondary=materieutenti_table)
@@ -89,7 +89,7 @@ class Impegno(db.Model):
     iid = db.Column(db.Integer, primary_key=True, unique=True)
     appuntamento = db.Column(db.DateTime)
     status = db.Column(db.Integer)
-    """0 = non visualizzato, 1 = approvato, 2 = non approvato"""
+    # 0 = non visualizzato, 1 = approvato, 2 = non approvato
     corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'))
     stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'))
     mat_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
@@ -114,7 +114,8 @@ class Messaggio(db.Model):
         self.data = data
         self.tipo = tipo
 
-"""Funzioni del sito"""
+
+# Funzioni
 
 
 def login(username, password):
@@ -133,7 +134,7 @@ def find_user(username):
             return utenze
 
 
-"""Sito"""
+# Sito
 
 
 @app.route('/')
@@ -214,6 +215,39 @@ def page_message_del(mid):
         db.session.delete(messaggio)
         db.session.commit()
         return redirect(url_for('page_dashboard'))
+
+
+@app.route('/user_list')
+def page_user_list():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        utenti = User.query.all()
+        return render_template("User/list.htm", utente=utente, utenti=utenti)
+
+
+@app.route('/user_changepw/<int:uid>', methods=['GET', 'POST'])
+def page_user_changepw(uid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        if request.method == "GET":
+            entita = User.query.get_or_404(uid)
+            return render_template("User/changepw.htm", utente=utente, entita=entita)
+        else:
+            entita = User.query.get_or_404(uid)
+            p = bytes(request.form["password"], encoding="utf-8")
+            cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+            entita.passwd = cenere
+            db.session.commit()
+            print(bcrypt.checkpw(bytes(request.form["password"], encoding="utf-8"), entita.passwd))
+            return redirect(url_for('page_user_list'))
 
 
 if __name__ == "__main__":
