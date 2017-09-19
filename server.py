@@ -1,7 +1,7 @@
 from flask import Flask, session, url_for, redirect, request, render_template, abort
 from flask_sqlalchemy import SQLAlchemy
 import bcrypt
-from datetime import datetime, date, time
+from datetime import datetime, date
 import os
 
 app = Flask(__name__)
@@ -36,6 +36,7 @@ class User(db.Model):
     telegram_username = db.Column(db.String)
     corsi = db.relationship("Corso")
     materie = db.relationship("Materia", secondary=materieutenti_table)
+    impegno = db.relationship("Impegno")
 
     def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username):
         self.username = username
@@ -57,6 +58,7 @@ class Corso(db.Model):
     pid = db.Column(db.Integer, db.ForeignKey('user.uid'))
     argomenti = db.Column(db.String)
     materia = db.relationship("Materia", secondary=materiecorsi_table)
+    impegno = db.relationship("Impegno")
 
     def __init__(self, pid, argomenti, materia):
         self.pid = pid
@@ -72,6 +74,7 @@ class Materia(db.Model):
     mid = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String)
     professore = db.Column(db.String)
+    impegno = db.relationship("Impegno")
 
     def __init__(self, nome, professore):
         self.nome = nome
@@ -87,9 +90,9 @@ class Impegno(db.Model):
     appuntamento = db.Column(db.DateTime)
     status = db.Column(db.Integer)
     """0 = non visualizzato, 1 = approvato, 2 = non approvato"""
-    peer_id = db.Column(db.Integer)
-    stud_id = db.Column(db.Integer)
-    mat_id = db.Column(db.Integer)
+    corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'))
+    stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'))
+    mat_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
 
     def __init__(self, appuntamento, peer_id, stud_id, mat_id):
         self.appuntamento = appuntamento
@@ -98,6 +101,18 @@ class Impegno(db.Model):
         self.stud_id = stud_id
         self.mat_id = mat_id
 
+
+class Messaggio(db.Model):
+    __tablename__ = 'messaggio'
+    mid = db.Column(db.Integer, primary_key=True, unique=True)
+    testo = db.Column(db.String)
+    data = db.Column(db.Date)
+    tipo = db.Column(db.Integer) # 1 = success 2 = primary 3 = warning
+
+    def __init__(self, testo, data, tipo):
+        self.testo = testo
+        self.data = data
+        self.tipo = tipo
 
 """Funzioni del sito"""
 
@@ -151,7 +166,7 @@ def page_register():
         p = bytes(request.form["password"], encoding="utf-8")
         cenere = bcrypt.hashpw(p, bcrypt.gensalt())
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                         request.form['classe'], 0, request.form['usernameTelegram'])
+                         request.form['classe'], 2, request.form['usernameTelegram'])
         db.session.add(nuovouser)
         db.session.commit()
         return redirect(url_for('page_login'))
@@ -163,11 +178,56 @@ def page_dashboard():
         abort(403)
     else:
         utente = find_user(session['username'])
-        return render_template("dashboard.htm", utente=utente)
+        messaggi = Messaggio.query.all()
+        corsi = Corso.query.all()
+        impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
+        return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni)
+
+
+@app.route('/message_add', methods=['GET', 'POST'])
+def page_message_add():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        if request.method=="GET":
+            return render_template("Message/add.htm", utente=utente)
+        else:
+            oggi = date.today()
+            nuovomessaggio = Messaggio(request.form['testo'], oggi, request.form['scelta'])
+            db.session.add(nuovomessaggio)
+            db.session.commit()
+            return redirect(url_for('page_dashboard'))
+
+
+@app.route('/message_del/<int:mid>')
+def page_message_del(mid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        messaggio = Messaggio.query.get_or_404(mid)
+        db.session.delete(messaggio)
+        db.session.commit()
+        return redirect(url_for('page_dashboard'))
 
 
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
-    if not os.path.isfile("data.db"):
+    if not os.path.isfile("db.sqlite"):
         db.create_all()
+    #   salt = bcrypt.hashpw(b"password", bcrypt.gensalt())
+    #   nuovo = User("n.n@n.com", salt, "Normie", "Normie", "5F", 0, "@ciao")
+    #   db.session.add(nuovo)
+    #   db.session.commit()
+    #   nuovo = User("p.p@p.com", salt, "Peer", "Peer", "5F", 1, "@ciaso")
+    #   db.session.add(nuovo)
+    #   db.session.commit()
+    #   nuovo = User("a.a@a.com", salt, "Admin", "Balugani", "5F", 2, "@ciaosa")
+    #   db.session.add(nuovo)
+    #   db.session.commit()#
     app.run()

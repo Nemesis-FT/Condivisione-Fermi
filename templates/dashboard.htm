@@ -1,13 +1,115 @@
 {% extends "stampo.htm" %}
 {% block title %}Dashboard - Condivisione{% endblock %}
 {% block content %}
-<div class="jumbotron">
-  <h1 class="display-3">{% if utente.tipo == 0 %}Ciao, {{ utente.nome }}!{% elif utente.tipo == 1 %} Ciao, peer {{ utente.nome }}! {% elif utente.tipo == 2 %}Salve, Admin {{ utente.cognome }}.{% endif %}</h1>
-  <p class="lead">Ti diamo il benvenuto nella tua dashboard!</p>
-  <hr class="my-4">
-  <p>{% if utente.tipo == 0 %}In questa pagina potrai esplorare i corsi sulla piattaforma, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 1 %}In questa pagina potrai esplorare e creare corsi, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 2 %}Da questa pagina le sarà possibile abilitare gli utenti all'insegnamento, controllare i corsi ed eliminare utenti.{% endif %}</p>
-  <p class="lead">
+    <div class="jumbotron">
+        <h1 class="display-3">{% if utente.tipo == 0 %}Ciao, {{ utente.nome }}!{% elif utente.tipo == 1 %} Ciao, peer
+            {{ utente.nome }}! {% elif utente.tipo == 2 %}Salve, Admin {{ utente.cognome }}.{% endif %}</h1>
+        <p class="lead">Ti diamo il benvenuto nella tua dashboard!</p>
+        <hr class="my-4">
+        <p>{% if utente.tipo == 0 %}In questa pagina potrai esplorare i corsi sulla piattaforma, visualizzare i tuoi
+            impegni e modificare il tuo profilo.{% elif utente.tipo == 1 %}In questa pagina potrai esplorare e creare
+            corsi, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 2 %}Da questa pagina
+            le sarà possibile abilitare gli utenti all'insegnamento, controllare i corsi ed eliminare
+            utenti.{% endif %}</p>
+    </div>
+    <div class="row">
+            <div class="col-md-8">
+                <div id="accordion" role="tablist" class="fg-primary">
+                    <div class="card">
+                        <div class="card-header" role="tab" id="headingOne">
+                            <h5 class="mb-0">
+                                <a data-toggle="collapse" href="#collapseOne" aria-expanded="true"
+                                   aria-controls="collapseOne">
+                                    Messaggi di sistema
+                                </a>
+                            </h5>
+                        </div>
 
-  </p>
-</div>
+                        <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne"
+                             data-parent="#accordion">
+                            <div class="card-body">
+                                <div class="row">
+                                {% for messaggio in messaggi %}
+                                        <div class="col-md-10">
+                                            <div class="alert alert-{% if messaggio.tipo == 1 %}success{% elif messaggio.tipo == 2 %}primary{% elif messaggio.tipo == 3 %}danger{% endif %}" role="alert">
+                                                {{ messaggio.testo }}<br>{{ messaggio.data }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if utente.tipo == 2 %}
+                                            <a href="/message_del/{{ messaggio.mid }}">Elimina</a>
+                                            {% endif %}
+                                        </div>
+                                {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" role="tab" id="headingTwo">
+                            <h5 class="mb-0">
+                                <a class="collapsed" data-toggle="collapse" href="#collapseTwo" aria-expanded="false"
+                                   aria-controls="collapseTwo">
+                                    Impegni
+                                </a>
+                            </h5>
+                        </div>
+                        <div id="collapseTwo" class="collapse" role="tabpanel" aria-labelledby="headingTwo"
+                             data-parent="#accordion">
+                            <div class="card-body">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Richiedente</th>
+                                            <th>Proprietario</th>
+                                            <th>Materia</th>
+                                            <th>Data</th>
+                                        </tr>
+                                    </thead>
+                                    {% for impegno in impegni %}
+                                    {% endfor %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" role="tab" id="headingThree">
+                            <h5 class="mb-0">
+                                <a class="collapsed" data-toggle="collapse" href="#collapseThree" aria-expanded="false"
+                                   aria-controls="collapseThree">
+                                    Corsi
+                                </a>
+                            </h5>
+                        </div>
+                        <div id="collapseThree" class="collapse" role="tabpanel" aria-labelledby="headingThree"
+                             data-parent="#accordion">
+                            <div class="card-body">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Materia</th>
+                                            <th>Peer</th>
+                                            <th>Argomenti</th>
+                                            <th>Iscriviti</th>
+                                        </tr>
+                                    </thead>
+                                    {% for corso in corsi %}
+                                    {% endfor %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <a href="/register" type="button" class="btn btn-secondary btn-lg btn-block">Modifica il profilo</a>
+                {% if utente.tipo > 0 %}
+                    <a href="/register" type="button" class="btn btn-info btn-lg btn-block">Crea un corso</a>
+                    {% if utente.tipo > 1 %}
+                        <a href="/register" type="button" class="btn btn-warning btn-lg btn-block">Gestisci utenti</a>
+                        <a href="/message_add" type="button" class="btn btn-warning btn-lg btn-block">Crea messaggio di sistema</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
 {% endblock %}
