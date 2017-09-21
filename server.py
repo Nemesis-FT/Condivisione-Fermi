@@ -250,6 +250,107 @@ def page_user_changepw(uid):
             return redirect(url_for('page_user_list'))
 
 
+@app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
+def page_user_ascend(uid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            entita = User.query.get_or_404(uid)
+            if request.method == 'GET' and entita.tipo == 0:
+                materie = Materia.query.all()
+                return render_template("User/ascend.htm", utente=utente, entita=entita, materie=materie)
+            elif entita.tipo == 1:
+                entita.tipo = 0
+                for materia in entita.materie:
+                    db.session.delete(materia)
+                db.session.commit()
+                return redirect(url_for('page_user_list'))
+            else:
+                materie = list()
+                while True:
+                    materiestring = 'materia{}'.format(len(materie))
+                    if materiestring in request.form:
+                        materie.append(request.form['materiestring'])
+                    else:
+                        break;
+                for materia in materie:
+                    db.engine.execute(materieutenti_table.insert(), materia_id=materia.mid, user_id=entita.uid)
+                db.session.commit()
+                return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_del/<int:uid>')
+def page_user_del(uid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            entita = User.query.get_or_404(uid)
+            for materia in entita.materie:
+                db.session.delete(materia)
+            db.session.delete(entita)
+            db.session.commit()
+            return redirect(url_for('page_user_list'))
+
+
+@app.route('/materia_add', methods=['GET', 'POST'])
+def page_materia_add():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                return render_template("Materia/add.htm", utente=utente)
+            else:
+                nuovamateria = Materia(request.form["nome"], request.form["professore"])
+                db.session.add(nuovamateria)
+                db.session.commit()
+                return redirect(url_for('page_materia_list'))
+
+
+@app.route('/materia_list')
+def page_materia_list():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            materie = Materia.query.all()
+            return render_template("Materia/list.htm", utente=utente, materie=materie)
+
+
+@app.route('/materia_edit/<int:mid>', methods=['GET', 'POST'])
+def page_materia_edit(mid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                materia = Materia.query.get_or_404(mid)
+                return render_template("Materia/edit.htm", utente=utente, materia=materia)
+            else:
+                materia = Materia.query.get_or_404(mid)
+                materia.nome = request.form['nome']
+                materia.professore = request.form['professore']
+                db.session.commit()
+                return redirect(url_for('page_materia_list'))
+
+
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
     if not os.path.isfile("db.sqlite"):

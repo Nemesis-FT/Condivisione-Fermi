@@ -1,0 +1,16 @@
+{% extends "stampo.htm" %}
+{% block title %}Nuova materia - Condivisione{% endblock %}
+{% block content %}
+    <h1>Creazione materia</h1>
+    <form action="/materia_add" method="POST">
+      <div class="form-group">
+        <label for="nome">Nome della materia</label>
+        <input type="text" class="form-control" id="nome" placeholder="Nome materia" name="nome">
+      </div>
+      <div class="form-group">
+        <label for="prof">Nome del professore</label>
+        <input type="text" class="form-control" id="prof" placeholder="Professore della materia" name="professore">
+      </div>
+    <button type="submit" class="btn btn-primary">Invia</button>
+    </form>
+{% endblock %}
