@@ -385,7 +385,7 @@ def page_materia_edit(mid):
                 return redirect(url_for('page_materia_list'))
 
 
-@app.route('/corso_add')
+@app.route('/corso_add', methods=['GET', 'POST'])
 def page_corso_add():
     if 'username' not in session:
         abort(403)
@@ -397,7 +397,7 @@ def page_corso_add():
             if request.method == 'GET':
                 uid = utente.uid
                 print(uid)
-                autorizzate = User.query.join(Abilitato).join(Materia).all()
+                autorizzate = Materia.query.join(Abilitato).join(User).all()
                 print(autorizzate)
                 return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
             else:
