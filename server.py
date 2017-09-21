@@ -134,7 +134,30 @@ def find_user(username):
             return utenze
 
 
-# Sito
+# Gestori Errori
+
+
+@app.errorhandler(400)
+def page_400(_):
+    return render_template('400.htm')
+
+
+@app.errorhandler(403)
+def page_403(_):
+    return render_template('403.htm')
+
+
+@app.errorhandler(404)
+def page_404(_):
+    return render_template('404.htm')
+
+
+@app.errorhandler(500)
+def page_500(e):
+    return render_template('500.htm', e=e)
+
+
+# Pagine
 
 
 @app.route('/')
@@ -350,6 +373,20 @@ def page_materia_edit(mid):
                 materia.professore = request.form['professore']
                 db.session.commit()
                 return redirect(url_for('page_materia_list'))
+
+
+@app.route('/corso_add')
+def page_corso_add():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 1:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                autorizzate=User.query.join(Materia).filter_by(uid=utente.uid).all()
+                return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
 
 
 if __name__ == "__main__":
