@@ -15,7 +15,7 @@ db = SQLAlchemy(app)
 # Tabelle associative
 
 
-materiecorsi_table = db.Table('materiecorsi', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('corso_id', db.Integer, db.ForeignKey('corso.cid')))
+#materiecorsi_table = db.Table('materiecorsi', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('corso_id', db.Integer, db.ForeignKey('corso.cid')))
 materieutenti_table = db.Table('materieutenti', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('user_id', db.Integer, db.ForeignKey('user.uid')))
 
 
@@ -57,13 +57,14 @@ class Corso(db.Model):
     cid = db.Column(db.Integer, primary_key=True)
     pid = db.Column(db.Integer, db.ForeignKey('user.uid'))
     argomenti = db.Column(db.String)
-    materia = db.relationship("Materia", secondary=materiecorsi_table)
+    materia_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
     impegno = db.relationship("Impegno")
+    materia = db.relationship("Materia")
 
-    def __init__(self, pid, argomenti, materia):
+    def __init__(self, pid, argomenti, materia_id):
         self.pid = pid
         self.argomenti = argomenti
-        self.materia = materia
+        self.materia_id = materia_id
 
     def __repr__(self):
         return "<Corso {}>".format(self.cid, self.pid)
@@ -385,8 +386,13 @@ def page_corso_add():
             abort(403)
         else:
             if request.method == 'GET':
-                autorizzate=User.query.join(Materia).filter_by(uid=utente.uid).all()
+                autorizzate = User.query.join(Materia).all()
                 return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
+            else:
+                nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'])
+                db.session.add(nuovocorso)
+                db.session.commit()
+                return redirect(url_for('page_dashboard'))
 
 
 if __name__ == "__main__":
