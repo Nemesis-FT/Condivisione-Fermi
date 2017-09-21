@@ -1,6 +1,7 @@
 .card-header-d{
   border: none !important;
   border-radius: 0 !important;
+  background-color: #e9ecef!important
 }
 
 .card-d{
@@ -8,12 +9,12 @@
 }
 
 .card-body-d-m{
-  border-left:  2px solid #f7f7f7;
-  border-right: 2px solid #f7f7f7;
+  border-left:  2px solid #e9ecef!important;
+  border-right: 2px solid #e9ecef!important;
 }
 
 .card-body-d-d{
-  border-left: 2px solid #f7f7f7;
-  border-right: 2px solid #f7f7f7;
-  border-bottom: 2px solid #f7f7f7;
+  border-left: 2px solid #e9ecef7!important;
+  border-right: 2px solid #e9ecef!important;
+  border-bottom: 2px solid #e9ecef!important;
 }

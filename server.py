@@ -12,13 +12,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
-# Tabelle associative
-
-
-#materiecorsi_table = db.Table('materiecorsi', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('corso_id', db.Integer, db.ForeignKey('corso.cid')))
-materieutenti_table = db.Table('materieutenti', db.Model.metadata, db.Column('materia_id', db.Integer, db.ForeignKey('materia.mid')), db.Column('user_id', db.Integer, db.ForeignKey('user.uid')))
-
-
 # Classi
 
 
@@ -35,7 +28,7 @@ class User(db.Model):
     # 0 = utente normale, 1 = peer, 2 = amministratore
     telegram_username = db.Column(db.String)
     corsi = db.relationship("Corso")
-    materie = db.relationship("Materia", secondary=materieutenti_table)
+    materie = db.relationship("Abilitato", backref='utente', lazy='dynamic', cascade='delete')
     impegno = db.relationship("Impegno")
 
     def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username):
@@ -76,6 +69,7 @@ class Materia(db.Model):
     nome = db.Column(db.String)
     professore = db.Column(db.String)
     impegno = db.relationship("Impegno")
+    utente = db.relationship("Abilitato", backref="materia", lazy='dynamic', cascade='delete')
 
     def __init__(self, nome, professore):
         self.nome = nome
@@ -114,6 +108,20 @@ class Messaggio(db.Model):
         self.testo = testo
         self.data = data
         self.tipo = tipo
+
+
+class Abilitato(db.Model):
+    __tablename__ = "abilitazioni"
+
+    mid = db.Column(db.Integer, db.ForeignKey('materia.mid'), primary_key=True)
+    uid = db.Column(db.Integer, db.ForeignKey('user.uid'), primary_key=True)
+
+    def __init__(self, mid, uid):
+        self.mid = mid
+        self.uid = uid
+
+    def __repr__(self):
+        return "<Abilitato {} per {}>".format(self.uid, self.mid)
 
 
 # Funzioni
@@ -302,7 +310,8 @@ def page_user_ascend(uid):
                     else:
                         break
                 for materia in materie:
-                    db.engine.execute(materieutenti_table.insert(), materia_id=int(materia), user_id=int(entita.uid))
+                    nuovocompito = Abilitato(materia, entita.uid)
+                    db.session.add(nuovocompito)
                 entita.tipo = 1
                 db.session.commit()
                 return redirect(url_for('page_user_list'))
@@ -386,7 +395,10 @@ def page_corso_add():
             abort(403)
         else:
             if request.method == 'GET':
-                autorizzate = User.query.join(Materia).all()
+                uid = utente.uid
+                print(uid)
+                autorizzate = User.query.join(Abilitato).join(Materia).all()
+                print(autorizzate)
                 return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
             else:
                 nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'])
