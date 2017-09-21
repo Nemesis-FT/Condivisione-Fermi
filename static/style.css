@@ -1,0 +1,19 @@
+.card-header-d{
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.card-d{
+  border: none !important;
+}
+
+.card-body-d-m{
+  border-left:  2px solid #f7f7f7;
+  border-right: 2px solid #f7f7f7;
+}
+
+.card-body-d-d{
+  border-left: 2px solid #f7f7f7;
+  border-right: 2px solid #f7f7f7;
+  border-bottom: 2px solid #f7f7f7;
+}

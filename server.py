@@ -274,11 +274,12 @@ def page_user_ascend(uid):
                 while True:
                     materiestring = 'materia{}'.format(len(materie))
                     if materiestring in request.form:
-                        materie.append(request.form['materiestring'])
+                        materie.append(request.form[materiestring])
                     else:
-                        break;
+                        break
                 for materia in materie:
-                    db.engine.execute(materieutenti_table.insert(), materia_id=materia.mid, user_id=entita.uid)
+                    db.engine.execute(materieutenti_table.insert(), materia_id=int(materia), user_id=int(entita.uid))
+                entita.tipo = 1
                 db.session.commit()
                 return redirect(url_for('page_user_list'))
 

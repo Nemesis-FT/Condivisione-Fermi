@@ -15,8 +15,8 @@
     <div class="row">
             <div class="col-md-8">
                 <div id="accordion" role="tablist" class="fg-primary">
-                    <div class="card">
-                        <div class="card-header" role="tab" id="headingOne">
+                    <div class="card card-d">
+                        <div class="card-header card-header-d" role="tab" id="headingOne">
                             <h5 class="mb-0">
                                 <a data-toggle="collapse" href="#collapseOne" aria-expanded="true"
                                    aria-controls="collapseOne">
@@ -27,7 +27,7 @@
 
                         <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne"
                              data-parent="#accordion">
-                            <div class="card-body">
+                            <div class="card-body card-body-d-m">
                                 {% for messaggio in messaggi %}
                                     <div class="alert alert-{% if messaggio.tipo == 1 %}success{% elif messaggio.tipo == 2 %}primary{% elif messaggio.tipo == 3 %}danger{% endif %}" role="alert">
                                         <div class="row">
@@ -45,8 +45,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-header" role="tab" id="headingTwo">
+                    <div class="card card-d">
+                        <div class="card-header card-header-d" role="tab" id="headingTwo">
                             <h5 class="mb-0">
                                 <a class="collapsed" data-toggle="collapse" href="#collapseTwo" aria-expanded="false"
                                    aria-controls="collapseTwo">
@@ -56,7 +56,7 @@
                         </div>
                         <div id="collapseTwo" class="collapse" role="tabpanel" aria-labelledby="headingTwo"
                              data-parent="#accordion">
-                            <div class="card-body">
+                            <div class="card-body card-body-d-m">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
@@ -72,8 +72,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-header" role="tab" id="headingThree">
+                    <div class="card card-d">
+                        <div class="card-header card-header-d" role="tab" id="headingThree">
                             <h5 class="mb-0">
                                 <a class="collapsed" data-toggle="collapse" href="#collapseThree" aria-expanded="false"
                                    aria-controls="collapseThree">
@@ -83,7 +83,7 @@
                         </div>
                         <div id="collapseThree" class="collapse" role="tabpanel" aria-labelledby="headingThree"
                              data-parent="#accordion">
-                            <div class="card-body">
+                            <div class="card-body card-body-d-d">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
