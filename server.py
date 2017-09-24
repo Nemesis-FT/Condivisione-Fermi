@@ -212,9 +212,14 @@ def page_dashboard():
     else:
         utente = find_user(session['username'])
         messaggi = Messaggio.query.all()
-        corsi = Corso.query.all()
+        corsi = Corso.query.join(Materia).join(User).all()
         impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni)
+
+
+@app.route('/informazioni')
+def page_informaizoni():
+    return render_template("informazioni.htm")
 
 
 @app.route('/message_add', methods=['GET', 'POST'])
@@ -332,6 +337,39 @@ def page_user_del(uid):
             db.session.delete(entita)
             db.session.commit()
             return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_inspect/<int:pid>')
+def page_user_inspect(pid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        entita = User.query.get_or_404(pid)
+        return render_template("User/inspect.htm", utente=utente, entita=entita)
+
+
+@app.route('/user_edit/<int:uid>', methods=['GET', 'POST'])
+def page_user_edit(uid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.uid != uid:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                entita = User.query.get_or_404(uid)
+                return render_template("User/edit.htm", utente=utente, entita=entita)
+            else:
+                entita = User.query.get_or_404(uid)
+                p = bytes(request.form["password"], encoding="utf-8")
+                cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+                entita.passwd = cenere
+                entita.classe = request.form["classe"]
+                entita.telegram_username = request.form["usernameTelegram"]
+                db.session.commit()
+                return redirect(url_for('page_dashboard'))
 
 
 @app.route('/materia_add', methods=['GET', 'POST'])

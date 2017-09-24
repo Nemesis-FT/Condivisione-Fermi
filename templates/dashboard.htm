@@ -4,7 +4,7 @@
     <div class="jumbotron">
         <h1 class="display-3">{% if utente.tipo == 0 %}Ciao, {{ utente.nome }}!{% elif utente.tipo == 1 %} Ciao, peer
             {{ utente.nome }}! {% elif utente.tipo == 2 %}Salve, Admin {{ utente.cognome }}.{% endif %}</h1>
-        <p class="lead">Ti diamo il benvenuto nella tua dashboard!</p>
+        <p class="lead"> {% if utente.tipo == 2 %} Le {% else %}Ti{% endif %} diamo il benvenuto nella {% if utente.tipo == 2 %} sua {% else %}tua{% endif %} dashboard!</p>
         <hr class="my-4">
         <p>{% if utente.tipo == 0 %}In questa pagina potrai esplorare i corsi sulla piattaforma, visualizzare i tuoi
             impegni e modificare il tuo profilo.{% elif utente.tipo == 1 %}In questa pagina potrai esplorare e creare
@@ -57,11 +57,11 @@
                         <div id="collapseTwo" class="collapse" role="tabpanel" aria-labelledby="headingTwo"
                              data-parent="#accordion">
                             <div class="card-body card-body-d-m">
-                                <table class="table table-hover">
+                                <table class="table table-sm">
                                     <thead>
                                         <tr>
-                                            <th>Richiedente</th>
-                                            <th>Proprietario</th>
+                                            <th>Rich.</th>
+                                            <th>Peer</th>
                                             <th>Materia</th>
                                             <th>Data</th>
                                         </tr>
@@ -84,7 +84,7 @@
                         <div id="collapseThree" class="collapse" role="tabpanel" aria-labelledby="headingThree"
                              data-parent="#accordion">
                             <div class="card-body card-body-d-d">
-                                <table class="table table-hover">
+                                <table class="table table-sm">
                                     <thead>
                                         <tr>
                                             <th>Materia</th>
@@ -94,10 +94,10 @@
                                         </tr>
                                     </thead>
                                     {% for corso in corsi %}
-                                        <td>{{ corso.materia }}</td>
-                                        <td>{{ corso.pid }}</td>
+                                        <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
+                                        <td> <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-search" aria-hidden="true"></i></a></td>
                                         <td>{{ corso.argomenti }}</td>
-                                        <td></td>
+                                        <td>{% if corso.pid == utente.uid %} <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban" aria-hidden="true"></i></a>  {% elif utente.tipo==2 %} <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban" aria-hidden="true"></i></a> {% else %} <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in" aria-hidden="true"></i></a> {% endif %}</td>
                                     {% endfor %}
                                 </table>
                             </div>
@@ -106,7 +106,8 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <a href="/register" type="button" class="btn btn-secondary btn-lg btn-block">Modifica il profilo</a>
+                <a href="/user_edit/{{ utente.uid }}" type="button" class="btn btn-secondary btn-lg btn-block">Modifica il profilo</a>
+                <a href="/informazioni" type="button" class="btn btn-secondary btn-lg btn-block">Informazioni</a>
                 {% if utente.tipo > 0 %}
                     <a href="/corso_add" type="button" class="btn btn-info btn-lg btn-block">Crea un corso</a>
                     {% if utente.tipo > 1 %}

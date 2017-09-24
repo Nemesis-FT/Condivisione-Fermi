@@ -1,0 +1,35 @@
+{% extends "stampo.htm" %}
+{% block title %}Informazioni - Condivisione{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>
+            Informazioni su Condivisione
+        </h1>
+    </div>
+    <div class="row">
+        <div class="col-sm-7">
+            <div class="card">
+                <div class="card-header" >Informazioni sul sito</div>
+                <div class="card-body">
+                    Questo sito è stato scritto da <a href="mailto:lorenzo.balugani@gmail.com">Lorenzo Balugani</a> con il contributo di <a href="mailto:ste.pigozzi@gmail.com">Stefano Pigozzi</a> durante l'estate del 2017.<br>
+                    Questo sito utilizza <a href="https://www.python.org/">Python 3.6</a>, <a href="http://flask.pocoo.org/">Flask</a> e <a href="https://www.sqlalchemy.org/">SQLAlchemy</a>.<br>
+                    Il <a href="https://github.com/LBindustries/Condivisione-Fermi">codice sorgente</a> è disponibile su GitHub, rilasciato sotto GPLv3.<br>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-5">
+            <br>
+            <img width="100%" alt="condivisione-logo" src="{{ url_for('static', filename='Condivisione.png') }}"><br><br>
+            <img width="100%" alt="fermitech-logo" src="{{ url_for('static', filename='Fermitech.png') }}"><br>
+        </div>
+    </div>
+    <br>
+    <div class="card">
+        <div class="card-header">Trattamento dati personali</div>
+        <div class="card-body">
+            Ai sensi dell'articolo 13 del Disegno Legislativo 196/2003 in materia di protezione dei dati personali si informa che i dati non verranno analizzati e solamente utilizzati all'interno dell'applicativo per erogare il Servizio.<br> Attraverso l'iscrizione alla piattaforma l'utente accetta, in maniera implicita, che i suoi dati vengano utilizzati a tale scopo.
+        </div>
+    </div>
+    <br>
+    <center>Condivisione è basato su Gestione 1.05 Permafrost. Gestione e Condivisione sono software di FermiTech Softworks. Versione di Condivisione 1.0R</center>
+{% endblock %}
