@@ -1,0 +1,25 @@
+{% extends "stampo.htm" %}
+{% block title %}Notifiche - Condivisione{% endblock %}
+{% block content %}
+    <h1>Nuove richieste di ripetizioni</h1>
+    <table class="table table-sm">
+        <thead>
+        <tr>
+            <th>Materia</th>
+            <th>Studente</th>
+            <th>Data</th>
+            <th>Azioni</th>
+        </tr>
+        </thead>
+        {% for impegno in impegni %}
+            {% if impegno.status == 0 %}
+                <tr>
+                    <td>{{ impegno.materia }}</td>
+                    <td><a href="/user_inspect/{{ impegno.stud_id }}">Ispeziona</a></td>
+                    <td>{{ impegno.appuntamento }}</td>
+                    <td><a href="/impegno_accept/{{ impegno.iid }}"><i class="fa fa-check" aria-hidden="true"></i></a> <a href="/impegno_del/{{ impegno.iid }}"><i class="fa fa-times" aria-hidden="true"></i></a></td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+{% endblock %}

@@ -14,7 +14,7 @@
     </div>
     {% if utente.tipo > 0 %}
     <ul class="list-group" width=100%>
-        <li class="list-group-item"><a href="/notifiche/{{ utente.uid }}">{% if utente.notifiche > 0 %}Ci sono {{ utente.notifiche }} nuov{% if utente.notifiche > 1 %}e{% else %}a{% endif %} richiest{% if utente.notifiche > 1 %}e{% else %}a{% endif %} di ripetizione!{% else %}Nessuna nuova richiesta di ripetizione{% endif %}</a></li>
+        <li class="list-group-item"><a href="/notifiche">{% if utente.notifiche > 0 %}{% if utente.notifiche < 1 %}C'è{% else %}Ci sono{% endif %} {{ utente.notifiche }} nuov{% if utente.notifiche > 1 %}e{% else %}a{% endif %} richiest{% if utente.notifiche > 1 %}e{% else %}a{% endif %} di ripetizione!{% else %}Nessuna nuova richiesta di ripetizione{% endif %}</a></li>
     </ul>
     {% endif %}
     <br>
@@ -66,15 +66,17 @@
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
+                                            <th>Materia</th>
+                                            <th>Peer</th>
                                             <th>Data</th>
-                                            <th>Azioni</th>
                                         </tr>
                                     </thead>
                                         {% for impegno in impegni %}
                                             {% if impegno.status == 1 %}
                                             <tr>
+                                                <td>{{ impegno.materia }}</td>
+                                                <td>{{ impegno.peer }}</td>
                                                 <td>{{ impegno.appuntamento }}</td>
-                                                <td><a href="/materia_ispeziona/{{ impegno.mid }}">Esamina materia</a><br><a href="/corso_ispeziona/{{ impegno.cid }}">Esamina corso</a></td>
                                             </tr>
                                             {% endif %}
                                         {% endfor %}

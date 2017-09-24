@@ -1,8 +1,9 @@
 from flask import Flask, session, url_for, redirect, request, render_template, abort
 from flask_sqlalchemy import SQLAlchemy
 import bcrypt
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
+import smtplib
 
 app = Flask(__name__)
 #app.secret_key = os.environ["flask_secret_key"]
@@ -147,6 +148,24 @@ def find_user(username):
             return utenze
 
 
+def sendemail(emailutente, kind, appuntamento, nome, materia, messaggio):
+    username = ""
+    password = ""
+    sender = ""
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(username, password)
+    if str(kind) == "1":  # Hai una nuova richiesta sul sito
+        msg = "L\'utente " + nome + " ha chiesto un appuntamento il " + appuntamento + " per " + materia + ". Per accettare o declinare, accedi al sito Condivisione."
+    elif str(kind) == "2":
+        msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " non e\' stata accettata. La motivazione e\' stata: " + messaggio
+    elif str(kind) == "3":
+        msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " e\' stata accettata."
+    else:
+        msg = "Qualcosa non ha funzionato. Collegati al sito per vedere cosa c\'e\' di nuovo"
+    server.sendmail(sender, emailutente, msg)
+
+
 # Gestori Errori
 
 
@@ -203,7 +222,7 @@ def page_register():
         p = bytes(request.form["password"], encoding="utf-8")
         cenere = bcrypt.hashpw(p, bcrypt.gensalt())
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                         request.form['classe'], 2, request.form['usernameTelegram'])
+                         request.form['classe'], 0, request.form['usernameTelegram'])
         db.session.add(nuovouser)
         db.session.commit()
         return redirect(url_for('page_login'))
@@ -217,7 +236,13 @@ def page_dashboard():
         utente = find_user(session['username'])
         messaggi = Messaggio.query.all()
         corsi = Corso.query.join(Materia).join(User).all()
-        impegni = Impegno.query.filter_by(stud_id=utente.uid).join(Materia).all()
+        impegni = Impegno.query.filter_by(peer=utente.username).join(Materia).all()
+        oggi = datetime.today()
+        oggi = oggi - timedelta(days=1)
+        for impegno in impegni:
+            if impegno.appuntamento < oggi:
+                db.session.delete(impegno)
+        db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni)
 
 
@@ -437,7 +462,6 @@ def page_corso_add():
             abort(403)
         else:
             if request.method == 'GET':
-                uid = utente.uid
                 autorizzate = Materia.query.join(Abilitato).join(User).all()
                 return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
             else:
@@ -461,37 +485,73 @@ def page_corso_join(cid):
             hh, mi = request.form["ora"].split(":", 1)
             data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
             peer = User.query.get_or_404(corso.pid)
-            materia = User.query.get_or_404(corso.materia.id)
-            nuovoimpegno = Impegno(data, corso.cid, utente.uid, corso.materia.mid, materia, peer)
-            peer = User.query.get_or_404(corso.pid)
+            materia = Materia.query.get_or_404(corso.materia_id)
+            nuovoimpegno = Impegno(data, cid, utente.uid, corso.materia_id, materia.nome, peer.username)
             peer.notifiche = peer.notifiche+1
             db.session.add(nuovoimpegno)
             db.session.commit()
+            sendemail(peer.username, 1, utente.nome, materia.nome, "")
             return redirect(url_for('page_dashboard'))
 
 
-@app.route('/notifiche/<int:uid>', methods=['GET', 'POST'])
-def page_notifiche(uid):
+@app.route('/notifiche')
+def page_notifiche():
     if 'username' not in session:
         abort(403)
     else:
         utente = find_user(session['username'])
-        if utente.uid != uid:
+        if utente.tipo < 1:
             abort(403)
+        else:
+            impegni = Impegno.query.filter_by(peer=utente.username).all()
+            utente.notifiche = 0
+            db.session.commit()
+            return render_template("Notifica/list.htm", utente=utente, impegni=impegni)
+
+
+@app.route('/impegno_accept/<int:iid>')
+def page_notifiche_accept(iid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 1:
+            abort(403)
+        else:
+            impegno = Impegno.query.get_or_404(iid)
+            impegno.status = 1
+            db.session.commit()
+            studente = User.query.get_or_404(impegno.stud_id)
+            sendemail(studente.username, 1, utente.nome, impegno.materia.nome, "")
+            return redirect(url_for('page_notifiche'))
+
+
+@app.route('/impegno_del/<int:iid>', methods=['GET', 'POST'])
+def page_notifiche_del(iid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 1:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                return render_template("Notifica/del.htm", utente=utente, iid=iid)
+            else:
+                impegno = Impegno.query.get_or_404(iid)
+                studente = User.query.get_or_404(impegno.stud_id)
+                db.session.delete(impegno)
+                db.session.commit()
+                sendemail(studente.username, 1, utente.nome, impegno.materia.nome, request.form['testo'])
+                return redirect(url_for('page_notifiche'))
 
 
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
-    if not os.path.isfile("db.sqlite"):
-        db.create_all()
-        salt = bcrypt.hashpw(b"password", bcrypt.gensalt())
-        nuovo = User("n.n@n.com", salt, "Normie", "Normie", "5F", 0, "@ciao")
-        db.session.add(nuovo)
-        db.session.commit()
-        nuovo = User("p.p@p.com", salt, "Peer", "Peer", "5F", 1, "@ciaso")
-        db.session.add(nuovo)
-        db.session.commit()
-        nuovo = User("a.a@a.com", salt, "Admin", "Balugani", "5F", 2, "@ciaosa")
-        db.session.add(nuovo)
-        db.session.commit()#
+    # if not os.path.isfile("db.sqlite"):
+        # db.create_all()
+        # salt = bcrypt.hashpw(b"password", bcrypt.gensalt())
+        # nuovo = User("a.a@a.com", salt, "Admin", "Balugani", "5F", 2, "@ciaosa")
+        # db.session.add(nuovo)
+        # db.session.commit()
     app.run()
