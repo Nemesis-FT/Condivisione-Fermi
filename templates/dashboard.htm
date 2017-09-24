@@ -14,7 +14,7 @@
     </div>
     {% if utente.tipo > 0 %}
     <ul class="list-group" width=100%>
-        <li class="list-group-item"><a href="/notifiche">{% if utente.notifiche > 0 %}{% if utente.notifiche < 1 %}C'è{% else %}Ci sono{% endif %} {{ utente.notifiche }} nuov{% if utente.notifiche > 1 %}e{% else %}a{% endif %} richiest{% if utente.notifiche > 1 %}e{% else %}a{% endif %} di ripetizione!{% else %}Nessuna nuova richiesta di ripetizione{% endif %}</a></li>
+        <li class="list-group-item"><a href="/notifiche">{% if utente.notifiche > 0 %}{% if utente.notifiche < 2 %}C'è{% else %}Ci sono{% endif %} {{ utente.notifiche }} nuov{% if utente.notifiche > 1 %}e{% else %}a{% endif %} richiest{% if utente.notifiche > 1 %}e{% else %}a{% endif %} di ripetizione!{% else %}Nessuna nuova richiesta di ripetizione{% endif %}</a></li>
     </ul>
     {% endif %}
     <br>
@@ -69,6 +69,7 @@
                                             <th>Materia</th>
                                             <th>Peer</th>
                                             <th>Data</th>
+                                            <th>Studente</th>
                                         </tr>
                                     </thead>
                                         {% for impegno in impegni %}
@@ -77,6 +78,7 @@
                                                 <td>{{ impegno.materia }}</td>
                                                 <td>{{ impegno.peer }}</td>
                                                 <td>{{ impegno.appuntamento }}</td>
+                                                <td><a href="/user_inspect/{{ impegno.stud_id }}"><i class="fa fa-search" aria-hidden="true"></i></a></td>
                                             </tr>
                                             {% endif %}
                                         {% endfor %}
@@ -102,7 +104,7 @@
                                             <th>Materia</th>
                                             <th>Peer</th>
                                             <th>Argomenti</th>
-                                            <th>Iscriviti</th>
+                                            <th>Azioni</th>
                                         </tr>
                                     </thead>
                                     {% for corso in corsi %}

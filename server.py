@@ -155,11 +155,11 @@ def sendemail(emailutente, kind, appuntamento, nome, materia, messaggio):
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(username, password)
-    if str(kind) == "1":  # Hai una nuova richiesta sul sito
+    if kind == 1:  # Hai una nuova richiesta sul sito
         msg = "L\'utente " + nome + " ha chiesto un appuntamento il " + appuntamento + " per " + materia + ". Per accettare o declinare, accedi al sito Condivisione."
-    elif str(kind) == "2":
-        msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " non e\' stata accettata. La motivazione e\' stata: " + messaggio
-    elif str(kind) == "3":
+    elif kind == 2:
+        msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " non e\' stata accettata. La motivazione e\' stata: " + messaggio + "."
+    elif kind == 3:
         msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " e\' stata accettata."
     else:
         msg = "Qualcosa non ha funzionato. Collegati al sito per vedere cosa c\'e\' di nuovo"
@@ -259,7 +259,7 @@ def page_message_add():
         utente = find_user(session['username'])
         if utente.tipo != 2:
             abort(403)
-        if request.method=="GET":
+        if request.method == "GET":
             return render_template("Message/add.htm", utente=utente)
         else:
             oggi = date.today()
@@ -363,6 +363,8 @@ def page_user_del(uid):
             entita = User.query.get_or_404(uid)
             for materia in entita.materie:
                 db.session.delete(materia)
+            for compito in entita.impegno:
+                db.session.delete(compito)
             db.session.delete(entita)
             db.session.commit()
             return redirect(url_for('page_user_list'))
@@ -452,6 +454,29 @@ def page_materia_edit(mid):
                 return redirect(url_for('page_materia_list'))
 
 
+@app.route('/materia_del/<int:mid>')
+def page_materia_del(mid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            materia = Materia.query.get_or_404(mid)
+            corsi = Corso.query.all()
+            impegni = Impegno.query.all()
+            for corso in corsi:
+                if corso.materia_id == mid:
+                    db.session.delete(corso)
+            for impegno in impegni:
+                if impegno.mat_id == mid:
+                    db.session.delete(impegno)
+            db.session.delete(materia)
+            db.session.commit()
+            return redirect(url_for('page_dashboard'))
+
+
 @app.route('/corso_add', methods=['GET', 'POST'])
 def page_corso_add():
     if 'username' not in session:
@@ -469,6 +494,25 @@ def page_corso_add():
                 db.session.add(nuovocorso)
                 db.session.commit()
                 return redirect(url_for('page_dashboard'))
+
+
+@app.route('/corso_del/<int:cid>')
+def page_corso_del(cid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            corso = Corso.query.get_or_404(cid)
+            impegni = Impegno.query.all()
+            for impegno in impegni:
+                if impegno.corso_id == cid:
+                    db.session.delete(impegno)
+            db.session.delete(corso)
+            db.session.commit()
+            return redirect(url_for('page_dashboard'))
 
 
 @app.route('/corso_join/<int:cid>', methods=['GET', 'POST'])
@@ -490,7 +534,7 @@ def page_corso_join(cid):
             peer.notifiche = peer.notifiche+1
             db.session.add(nuovoimpegno)
             db.session.commit()
-            sendemail(peer.username, 1, utente.nome, materia.nome, "")
+            sendemail(peer.username, 1, str(data), peer.nome, materia.nome, materia.nome)
             return redirect(url_for('page_dashboard'))
 
 
@@ -522,7 +566,7 @@ def page_notifiche_accept(iid):
             impegno.status = 1
             db.session.commit()
             studente = User.query.get_or_404(impegno.stud_id)
-            sendemail(studente.username, 1, utente.nome, impegno.materia.nome, "")
+            sendemail(studente.username, 3, str(impegno.appuntamento), utente.nome, impegno.materia, impegno.materia)
             return redirect(url_for('page_notifiche'))
 
 
@@ -542,7 +586,7 @@ def page_notifiche_del(iid):
                 studente = User.query.get_or_404(impegno.stud_id)
                 db.session.delete(impegno)
                 db.session.commit()
-                sendemail(studente.username, 1, utente.nome, impegno.materia.nome, request.form['testo'])
+                sendemail(studente.username, 2, str(impegno.appuntamento), utente.nome, impegno.materia, request.form['testo'])
                 return redirect(url_for('page_notifiche'))
 
 
