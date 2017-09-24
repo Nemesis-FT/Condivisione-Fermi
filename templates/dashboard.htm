@@ -12,6 +12,12 @@
             le sarà possibile abilitare gli utenti all'insegnamento, controllare i corsi ed eliminare
             utenti.{% endif %}</p>
     </div>
+    {% if utente.tipo > 0 %}
+    <ul class="list-group" width=100%>
+        <li class="list-group-item"><a href="/notifiche/{{ utente.uid }}">{% if utente.notifiche > 0 %}Ci sono {{ utente.notifiche }} nuov{% if utente.notifiche > 1 %}e{% else %}a{% endif %} richiest{% if utente.notifiche > 1 %}e{% else %}a{% endif %} di ripetizione!{% else %}Nessuna nuova richiesta di ripetizione{% endif %}</a></li>
+    </ul>
+    {% endif %}
+    <br>
     <div class="row">
             <div class="col-md-8">
                 <div id="accordion" role="tablist" class="fg-primary">
@@ -60,14 +66,18 @@
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
-                                            <th>Rich.</th>
-                                            <th>Peer</th>
-                                            <th>Materia</th>
                                             <th>Data</th>
+                                            <th>Azioni</th>
                                         </tr>
                                     </thead>
-                                    {% for impegno in impegni %}
-                                    {% endfor %}
+                                        {% for impegno in impegni %}
+                                            {% if impegno.status == 1 %}
+                                            <tr>
+                                                <td>{{ impegno.appuntamento }}</td>
+                                                <td><a href="/materia_ispeziona/{{ impegno.mid }}">Esamina materia</a><br><a href="/corso_ispeziona/{{ impegno.cid }}">Esamina corso</a></td>
+                                            </tr>
+                                            {% endif %}
+                                        {% endfor %}
                                 </table>
                             </div>
                         </div>
@@ -94,10 +104,12 @@
                                         </tr>
                                     </thead>
                                     {% for corso in corsi %}
-                                        <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
-                                        <td> <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-search" aria-hidden="true"></i></a></td>
-                                        <td>{{ corso.argomenti }}</td>
-                                        <td>{% if corso.pid == utente.uid %} <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban" aria-hidden="true"></i></a>  {% elif utente.tipo==2 %} <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban" aria-hidden="true"></i></a> {% else %} <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in" aria-hidden="true"></i></a> {% endif %}</td>
+                                        <tr>
+                                            <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
+                                            <td> <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-search" aria-hidden="true"></i></a></td>
+                                            <td>{{ corso.argomenti }}</td>
+                                            <td>{% if corso.pid == utente.uid %} <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban" aria-hidden="true"></i></a>  {% elif utente.tipo==2 %} <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban" aria-hidden="true"></i></a> {% else %} <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in" aria-hidden="true"></i></a> {% endif %}</td>
+                                        </tr>
                                     {% endfor %}
                                 </table>
                             </div>

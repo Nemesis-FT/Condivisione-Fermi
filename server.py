@@ -88,13 +88,17 @@ class Impegno(db.Model):
     corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'))
     stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'))
     mat_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
+    materia = db.Column(db.String)
+    peer = db.Column(db.String)
 
-    def __init__(self, appuntamento, peer_id, stud_id, mat_id):
+    def __init__(self, appuntamento, peer_id, stud_id, mat_id, materia, peer):
         self.appuntamento = appuntamento
         self.status = 0
         self.peer_id = peer_id
         self.stud_id = stud_id
         self.mat_id = mat_id
+        self.materia = materia
+        self.peer = peer
 
 
 class Messaggio(db.Model):
@@ -213,7 +217,7 @@ def page_dashboard():
         utente = find_user(session['username'])
         messaggi = Messaggio.query.all()
         corsi = Corso.query.join(Materia).join(User).all()
-        impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
+        impegni = Impegno.query.filter_by(stud_id=utente.uid).join(Materia).all()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni)
 
 
@@ -434,9 +438,7 @@ def page_corso_add():
         else:
             if request.method == 'GET':
                 uid = utente.uid
-                print(uid)
                 autorizzate = Materia.query.join(Abilitato).join(User).all()
-                print(autorizzate)
                 return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
             else:
                 nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'])
@@ -445,18 +447,51 @@ def page_corso_add():
                 return redirect(url_for('page_dashboard'))
 
 
+@app.route('/corso_join/<int:cid>', methods=['GET', 'POST'])
+def page_corso_join(cid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if request.method == 'GET':
+            return render_template("Corso/join.htm", utente=utente, cid=cid)
+        else:
+            corso = Corso.query.get_or_404(cid)
+            yyyy, mm, dd = request.form["data"].split("-", 2)
+            hh, mi = request.form["ora"].split(":", 1)
+            data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+            peer = User.query.get_or_404(corso.pid)
+            materia = User.query.get_or_404(corso.materia.id)
+            nuovoimpegno = Impegno(data, corso.cid, utente.uid, corso.materia.mid, materia, peer)
+            peer = User.query.get_or_404(corso.pid)
+            peer.notifiche = peer.notifiche+1
+            db.session.add(nuovoimpegno)
+            db.session.commit()
+            return redirect(url_for('page_dashboard'))
+
+
+@app.route('/notifiche/<int:uid>', methods=['GET', 'POST'])
+def page_notifiche(uid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.uid != uid:
+            abort(403)
+
+
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
     if not os.path.isfile("db.sqlite"):
         db.create_all()
-    #   salt = bcrypt.hashpw(b"password", bcrypt.gensalt())
-    #   nuovo = User("n.n@n.com", salt, "Normie", "Normie", "5F", 0, "@ciao")
-    #   db.session.add(nuovo)
-    #   db.session.commit()
-    #   nuovo = User("p.p@p.com", salt, "Peer", "Peer", "5F", 1, "@ciaso")
-    #   db.session.add(nuovo)
-    #   db.session.commit()
-    #   nuovo = User("a.a@a.com", salt, "Admin", "Balugani", "5F", 2, "@ciaosa")
-    #   db.session.add(nuovo)
-    #   db.session.commit()#
+        salt = bcrypt.hashpw(b"password", bcrypt.gensalt())
+        nuovo = User("n.n@n.com", salt, "Normie", "Normie", "5F", 0, "@ciao")
+        db.session.add(nuovo)
+        db.session.commit()
+        nuovo = User("p.p@p.com", salt, "Peer", "Peer", "5F", 1, "@ciaso")
+        db.session.add(nuovo)
+        db.session.commit()
+        nuovo = User("a.a@a.com", salt, "Admin", "Balugani", "5F", 2, "@ciaosa")
+        db.session.add(nuovo)
+        db.session.commit()#
     app.run()
