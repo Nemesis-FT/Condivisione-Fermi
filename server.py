@@ -152,18 +152,21 @@ def sendemail(emailutente, kind, appuntamento, nome, materia, messaggio):
     username = ""
     password = ""
     sender = ""
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.starttls()
-    server.login(username, password)
-    if kind == 1:  # Hai una nuova richiesta sul sito
-        msg = "L\'utente " + nome + " ha chiesto un appuntamento il " + appuntamento + " per " + materia + ". Per accettare o declinare, accedi al sito Condivisione."
-    elif kind == 2:
-        msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " non e\' stata accettata. La motivazione e\' stata: " + messaggio + "."
-    elif kind == 3:
-        msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " e\' stata accettata."
-    else:
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(username, password)
         msg = "Qualcosa non ha funzionato. Collegati al sito per vedere cosa c\'e\' di nuovo"
-    server.sendmail(sender, emailutente, msg)
+        if kind == 1:  # Hai una nuova richiesta sul sito
+            msg = "L\'utente " + nome + " ha chiesto un appuntamento il " + appuntamento + " per " + materia + ". Per accettare o declinare, accedi al sito Condivisione."
+        elif kind == 2:
+            msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " non e\' stata accettata. La motivazione e\' stata: " + messaggio + "."
+        else:
+            msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " e\' stata accettata."
+        server.sendmail(sender, emailutente, msg)
+        server.quit()
+    except:
+        print("Errore di invio mail")
 
 
 # Gestori Errori
@@ -221,8 +224,12 @@ def page_register():
     else:
         p = bytes(request.form["password"], encoding="utf-8")
         cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+        utenti = User.query.all()
+        valore = 0
+        if len(utenti) == 0:
+            valore = 2
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                         request.form['classe'], 0, request.form['usernameTelegram'])
+                         request.form['classe'], valore, request.form['usernameTelegram'])
         db.session.add(nuovouser)
         db.session.commit()
         return redirect(url_for('page_login'))
@@ -237,13 +244,18 @@ def page_dashboard():
         messaggi = Messaggio.query.all()
         corsi = Corso.query.join(Materia).join(User).all()
         impegni = Impegno.query.filter_by(peer=utente.username).join(Materia).all()
+        lezioni = Impegno.query.filter_by(stud_id=utente.uid).join(Materia).all()
         oggi = datetime.today()
         oggi = oggi - timedelta(days=1)
         for impegno in impegni:
             if impegno.appuntamento < oggi:
                 db.session.delete(impegno)
+        for lezione in lezioni:
+            if lezione.appuntamento < oggi:
+                db.session.delete(lezione)
         db.session.commit()
-        return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni)
+        return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
+                               lezioni=lezioni)
 
 
 @app.route('/informazioni')
@@ -592,10 +604,6 @@ def page_notifiche_del(iid):
 
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
-    # if not os.path.isfile("db.sqlite"):
-        # db.create_all()
-        # salt = bcrypt.hashpw(b"password", bcrypt.gensalt())
-        # nuovo = User("a.a@a.com", salt, "Admin", "Balugani", "5F", 2, "@ciaosa")
-        # db.session.add(nuovo)
-        # db.session.commit()
+    if not os.path.isfile("db.sqlite"):
+        db.create_all()
     app.run()

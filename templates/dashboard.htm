@@ -82,6 +82,16 @@
                                             </tr>
                                             {% endif %}
                                         {% endfor %}
+                                        {% for lezione in lezioni %}
+                                            {% if lezione.status == 1 %}
+                                            <tr>
+                                                <td>{{ lezione.materia }}</td>
+                                                <td>{{ lezione.peer }}</td>
+                                                <td>{{ lezione.appuntamento }}</td>
+                                                <td><a href="/user_inspect/{{ lezione.stud_id }}"><i class="fa fa-search" aria-hidden="true"></i></a></td>
+                                            </tr>
+                                            {% endif %}
+                                        {% endfor %}
                                 </table>
                             </div>
                         </div>
