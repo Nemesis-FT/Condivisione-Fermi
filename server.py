@@ -363,6 +363,25 @@ def page_user_ascend(uid):
                 return redirect(url_for('page_user_list'))
 
 
+@app.route('/user_godify/<int:uid>')
+def page_user_godify(uid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo != 2:
+            abort(403)
+        else:
+            entita = User.query.get_or_404(uid)
+            if entita.tipo == 2:
+                entita.tipo = 1
+            else:
+                entita.tipo = 2
+            db.session.commit()
+            return redirect(url_for('page_user_list'))
+
+
+
 @app.route('/user_del/<int:uid>')
 def page_user_del(uid):
     if 'username' not in session:
