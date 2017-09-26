@@ -381,7 +381,6 @@ def page_user_godify(uid):
             return redirect(url_for('page_user_list'))
 
 
-
 @app.route('/user_del/<int:uid>')
 def page_user_del(uid):
     if 'username' not in session:
