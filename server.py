@@ -31,6 +31,7 @@ class User(db.Model):
     corsi = db.relationship("Corso")
     materie = db.relationship("Abilitato", backref='utente', lazy='dynamic', cascade='delete')
     impegno = db.relationship("Impegno")
+    orari = db.Column(db.String)
 
     def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username):
         self.username = username
@@ -85,7 +86,7 @@ class Impegno(db.Model):
     iid = db.Column(db.Integer, primary_key=True, unique=True)
     appuntamento = db.Column(db.DateTime)
     status = db.Column(db.Integer)
-    # 0 = non visualizzato, 1 = approvato, 2 = non approvato
+    # 0 = non visualizzato, 1 = approvato, 2 = non approvato 3 = rilanciato
     corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'))
     stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'))
     mat_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
@@ -107,7 +108,7 @@ class Messaggio(db.Model):
     mid = db.Column(db.Integer, primary_key=True, unique=True)
     testo = db.Column(db.String)
     data = db.Column(db.Date)
-    tipo = db.Column(db.Integer) # 1 = success 2 = primary 3 = warning
+    tipo = db.Column(db.Integer)  # 1 = success 2 = primary 3 = warning
 
     def __init__(self, testo, data, tipo):
         self.testo = testo
@@ -128,6 +129,16 @@ class Abilitato(db.Model):
     def __repr__(self):
         return "<Abilitato {} per {}>".format(self.uid, self.mid)
 
+
+class Log(db.Model):
+    __tablename__ = "log"
+    lid = db.Column(db.Integer, primary_key=True)
+    contenuto = db.Column(db.String)
+    ora = db.Column(db.DateTime)
+
+    def __init__(self, contenuto, ora):
+        self.contenuto = contenuto
+        self.ora = ora
 
 # Funzioni
 
@@ -161,12 +172,18 @@ def sendemail(emailutente, kind, appuntamento, nome, materia, messaggio):
             msg = "L\'utente " + nome + " ha chiesto un appuntamento il " + appuntamento + " per " + materia + ". Per accettare o declinare, accedi al sito Condivisione."
         elif kind == 2:
             msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " non e\' stata accettata. La motivazione e\' stata: " + messaggio + "."
-        else:
+        elif kind == 3:
             msg = "La tua richiesta di ripetizione fatta allo studente " + nome + " e\' stata accettata."
+        elif kind == 4:
+            msg = "Il peer " + nome + " ha chiesto di spostare la ripetizione per il " + appuntamento + ". Per accettare o declinare, accedi al sito Condivisione."
+        elif kind == 5:
+            msg = "Lo studente " + nome + "ha accettato la tua proposta per il " + appuntamento
         server.sendmail(sender, emailutente, msg)
         server.quit()
     except:
-        print("Errore di invio mail")
+        stringa = "Errore di invio e-mail"
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
 
 
 # Gestori Errori
@@ -230,6 +247,9 @@ def page_register():
             valore = 2
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
                          request.form['classe'], valore, request.form['usernameTelegram'])
+        stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
         db.session.add(nuovouser)
         db.session.commit()
         return redirect(url_for('page_login'))
@@ -241,7 +261,7 @@ def page_dashboard():
         abort(403)
     else:
         utente = find_user(session['username'])
-        messaggi = Messaggio.query.all()
+        messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
         impegni = Impegno.query.filter_by(peer=utente.username).join(Materia).all()
         lezioni = Impegno.query.filter_by(stud_id=utente.uid).join(Materia).all()
@@ -319,12 +339,14 @@ def page_user_changepw(uid):
             entita = User.query.get_or_404(uid)
             return render_template("User/changepw.htm", utente=utente, entita=entita)
         else:
+            stringa = "L'utente " + utente.username + " ha cambiato la password a " + str(uid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
             p = bytes(request.form["password"], encoding="utf-8")
             cenere = bcrypt.hashpw(p, bcrypt.gensalt())
             entita.passwd = cenere
             db.session.commit()
-            print(bcrypt.checkpw(bytes(request.form["password"], encoding="utf-8"), entita.passwd))
             return redirect(url_for('page_user_list'))
 
 
@@ -337,6 +359,9 @@ def page_user_ascend(uid):
         if utente.tipo != 2:
             abort(403)
         else:
+            stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
             if request.method == 'GET' and entita.tipo == 0:
                 materie = Materia.query.all()
@@ -372,6 +397,9 @@ def page_user_godify(uid):
         if utente.tipo != 2:
             abort(403)
         else:
+            stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
             if entita.tipo == 2:
                 entita.tipo = 1
@@ -390,8 +418,14 @@ def page_user_del(uid):
         if utente.tipo != 2:
             abort(403)
         else:
+            stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente "+ str(uid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
             for materia in entita.materie:
+                stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
                 db.session.delete(materia)
             for compito in entita.impegno:
                 db.session.delete(compito)
@@ -423,6 +457,9 @@ def page_user_edit(uid):
                 entita = User.query.get_or_404(uid)
                 return render_template("User/edit.htm", utente=utente, entita=entita)
             else:
+                stringa = "L'utente " + utente.username + " ha modificato il proprio profilo"
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
                 entita = User.query.get_or_404(uid)
                 p = bytes(request.form["password"], encoding="utf-8")
                 cenere = bcrypt.hashpw(p, bcrypt.gensalt())
@@ -445,6 +482,9 @@ def page_materia_add():
             if request.method == 'GET':
                 return render_template("Materia/add.htm", utente=utente)
             else:
+                stringa = "L'utente " + utente.username + " ha creato una materia "
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
                 nuovamateria = Materia(request.form["nome"], request.form["professore"])
                 db.session.add(nuovamateria)
                 db.session.commit()
@@ -477,6 +517,9 @@ def page_materia_edit(mid):
                 materia = Materia.query.get_or_404(mid)
                 return render_template("Materia/edit.htm", utente=utente, materia=materia)
             else:
+                stringa = "L'utente " + utente.username + " ha modificato la materia " + str(mid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
                 materia = Materia.query.get_or_404(mid)
                 materia.nome = request.form['nome']
                 materia.professore = request.form['professore']
@@ -493,15 +536,24 @@ def page_materia_del(mid):
         if utente.tipo != 2:
             abort(403)
         else:
+            stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             materia = Materia.query.get_or_404(mid)
             corsi = Corso.query.all()
             impegni = Impegno.query.all()
             for corso in corsi:
                 if corso.materia_id == mid:
                     db.session.delete(corso)
+                    stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
+                    nuovorecord = Log(stringa, datetime.today())
+                    db.session.add(nuovorecord)
             for impegno in impegni:
                 if impegno.mat_id == mid:
                     db.session.delete(impegno)
+                    stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
+                    nuovorecord = Log(stringa, datetime.today())
+                    db.session.add(nuovorecord)
             db.session.delete(materia)
             db.session.commit()
             return redirect(url_for('page_dashboard'))
@@ -520,6 +572,9 @@ def page_corso_add():
                 autorizzate = Materia.query.join(Abilitato).join(User).all()
                 return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
             else:
+                stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
                 nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'])
                 db.session.add(nuovocorso)
                 db.session.commit()
@@ -535,11 +590,17 @@ def page_corso_del(cid):
         if utente.tipo != 2:
             abort(403)
         else:
+            stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             corso = Corso.query.get_or_404(cid)
             impegni = Impegno.query.all()
             for impegno in impegni:
                 if impegno.corso_id == cid:
                     db.session.delete(impegno)
+                    stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
+                    nuovorecord = Log(stringa, datetime.today())
+                    db.session.add(nuovorecord)
             db.session.delete(corso)
             db.session.commit()
             return redirect(url_for('page_dashboard'))
@@ -554,18 +615,48 @@ def page_corso_join(cid):
         if request.method == 'GET':
             return render_template("Corso/join.htm", utente=utente, cid=cid)
         else:
+            stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             corso = Corso.query.get_or_404(cid)
             yyyy, mm, dd = request.form["data"].split("-", 2)
             hh, mi = request.form["ora"].split(":", 1)
             data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
             peer = User.query.get_or_404(corso.pid)
             materia = Materia.query.get_or_404(corso.materia_id)
-            nuovoimpegno = Impegno(data, cid, utente.uid, corso.materia_id, materia.nome, peer.username)
+            nuovoimpegno = Impegno(data, corso.cid, utente.uid, corso.materia_id, materia.nome, peer.username)
             peer.notifiche = peer.notifiche+1
             db.session.add(nuovoimpegno)
             db.session.commit()
             sendemail(peer.username, 1, str(data), peer.nome, materia.nome, materia.nome)
             return redirect(url_for('page_dashboard'))
+
+
+@app.route('/impegno_rilancia/<int:iid>', methods=['GET', 'POST'])
+def page_impegno_rilancia(iid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 1:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                return render_template("Notifica/rilancia.htm", iid=iid)
+            else:
+                stringa = "L'utente " + utente.username + " ha creato il rinvio " + str(iid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
+                impegno = Impegno.query.get_or_404(iid)
+                yyyy, mm, dd = request.form["data"].split("-", 2)
+                hh, mi = request.form["ora"].split(":", 1)
+                data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+                impegno.appuntamento = data
+                impegno.status = 3
+                db.session.commit()
+                studente = User.query.get_or_404(impegno.stud_id)
+                sendemail(studente.username, 4, str(data), impegno.peer, impegno.peer, impegno.peer)
+                return redirect(url_for('page_notifiche'))
 
 
 @app.route('/notifiche')
@@ -592,6 +683,9 @@ def page_notifiche_accept(iid):
         if utente.tipo < 1:
             abort(403)
         else:
+            stringa = "L'utente " + utente.username + " ha accettato la ripetizione " + str(iid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
             impegno = Impegno.query.get_or_404(iid)
             impegno.status = 1
             db.session.commit()
@@ -612,6 +706,9 @@ def page_notifiche_del(iid):
             if request.method == 'GET':
                 return render_template("Notifica/del.htm", utente=utente, iid=iid)
             else:
+                stringa = "L'utente " + utente.username + " ha rimosso la richiesta " + str(iid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
                 impegno = Impegno.query.get_or_404(iid)
                 studente = User.query.get_or_404(impegno.stud_id)
                 db.session.delete(impegno)
@@ -620,8 +717,62 @@ def page_notifiche_del(iid):
                 return redirect(url_for('page_notifiche'))
 
 
+@app.route('/proposta_accept/<int:iid>')
+def page_proposta_accept(iid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        impegno = Impegno.query.get_or_404(iid)
+        if impegno.stud_id != utente.uid and impegno.status == 3:
+            abort(403)
+        else:
+            stringa = "L'utente " + utente.username + " ha accettato il rinvio " + str(iid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            impegno.status = 1
+            sendemail(impegno.peer, 5, str(impegno.appuntamento), utente.username, impegno.materia, impegno.materia)
+            db.session.commit()
+            return redirect(url_for("page_dashboard"))
+
+
+@app.route('/proposta_delete/<int:iid>')
+def page_proposta_delete(iid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        impegno = Impegno.query.get_or_404(iid)
+        if impegno.stud_id != utente.uid and impegno.status == 3:
+            abort(403)
+        else:
+            stringa = "L'utente " + utente.username + " ha rinunciato al rinvio " + str(iid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            db.session.remove(impegno)
+            db.session.commit()
+            return redirect(url_for("page_dashboard"))
+
+
+@app.route('/server_log')
+def page_log_view():
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 2:
+            abort(403)
+        else:
+            logs = Log.query.order_by(Log.ora.desc()).all()
+            return render_template("logs.htm", logs=logs, utente=utente)
+
+
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
     if not os.path.isfile("db.sqlite"):
         db.create_all()
+        db.session.commit()
+    nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.", datetime.today())
+    db.session.add(nuovrecord)
+    db.session.commit()
     app.run()

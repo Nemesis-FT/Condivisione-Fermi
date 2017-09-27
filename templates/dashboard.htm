@@ -69,7 +69,7 @@
                                             <th>Materia</th>
                                             <th>Peer</th>
                                             <th>Data</th>
-                                            <th>Studente</th>
+                                            <th>Azioni</th>
                                         </tr>
                                     </thead>
                                         {% for impegno in impegni %}
@@ -90,6 +90,14 @@
                                                 <td>{{ lezione.appuntamento }}</td>
                                                 <td><a href="/user_inspect/{{ lezione.stud_id }}"><i class="fa fa-search" aria-hidden="true"></i></a></td>
                                             </tr>
+                                            {% endif %}
+                                            {% if lezione.status == 3 %}
+                                                <tr>
+                                                    <td>{{ lezione.materia }}</td>
+                                                    <td>{{ lezione.peer }}</td>
+                                                    <td>{{ lezione.appuntamento }}</td>
+                                                    <td><a href="/user_inspect/{{ lezione.stud_id }}"><i class="fa fa-search" aria-hidden="true"></i></a> <a href="/proposta_accept/{{ lezione.iid }}"><i class="fa fa-check" aria-hidden="true"></i></a> <a href="/proposta_delete/{{ lezione.iid }}"><i class="fa fa-times" aria-hidden="true"></i></a></td>
+                                                </tr>
                                             {% endif %}
                                         {% endfor %}
                                 </table>
@@ -140,6 +148,7 @@
                         <a href="/user_list" type="button" class="btn btn-warning btn-lg btn-block">Gestisci utenti</a>
                         <a href="/materia_list" type="button" class="btn btn-warning btn-lg btn-block">Gestisci materie</a>
                         <a href="/message_add" type="button" class="btn btn-warning btn-lg btn-block">Crea messaggio di sistema</a>
+                        <a href="/server_log" type="button" class="btn btn-warning btn-lg btn-block">Esamina i log di sistema</a>
                     {% endif %}
                 {% endif %}
             </div>
