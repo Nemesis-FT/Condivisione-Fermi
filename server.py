@@ -92,8 +92,9 @@ class Impegno(db.Model):
     peer = db.Column(db.String)
     giorno = db.Column(db.Integer)
     ora = db.Column(db.String)
+    cid = db.Column(db.Integer)
 
-    def __init__(self, peer_id, stud_id, mat_id, materia, peer, giorno, ora):
+    def __init__(self, peer_id, stud_id, mat_id, materia, peer, giorno, ora, corso_id):
         self.peer_id = peer_id
         self.stud_id = stud_id
         self.mat_id = mat_id
@@ -101,6 +102,7 @@ class Impegno(db.Model):
         self.peer = peer
         self.giorno = giorno
         self.ora = ora
+        self.corso_id = corso_id
 
 
 class Messaggio(db.Model):
@@ -615,7 +617,11 @@ def page_corso_join(cid):
     else:
         utente = find_user(session['username'])
         impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
-        if len(impegni) > 0:
+        for impegno in impegni:
+            if impegno.stud_id == utente.uid and impegno.corso_id == cid:
+                return redirect(url_for('page_dashboard'))
+        impegni = Impegno.query.filter_by(corso_id=cid).all()
+        if len(impegni) > 3:
             return redirect(url_for('page_dashboard'))
         stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
         nuovorecord = Log(stringa, datetime.today())
@@ -623,8 +629,9 @@ def page_corso_join(cid):
         corso = Corso.query.get_or_404(cid)
         peer = User.query.get_or_404(corso.pid)
         materia = Materia.query.get_or_404(corso.materia_id)
-        nuovoimpegno = Impegno(corso.cid, utente.uid, corso.materia_id, materia.nome, peer.username,
-                               materia.giorno_settimana, materia.ora)
+        print(cid)
+        nuovoimpegno = Impegno(corso.pid, utente.uid, corso.materia_id, materia.nome, peer.username,
+                               materia.giorno_settimana, materia.ora, cid)
         db.session.add(nuovoimpegno)
         db.session.commit()
         return redirect(url_for('page_dashboard'))
