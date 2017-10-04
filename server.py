@@ -24,14 +24,12 @@ class User(db.Model):
     nome = db.Column(db.String)
     cognome = db.Column(db.String)
     classe = db.Column(db.String)
-    notifiche = db.Column(db.Integer)
     tipo = db.Column(db.Integer)
     # 0 = utente normale, 1 = peer, 2 = amministratore
-    telegram_username = db.Column(db.String)
+    telegram_username = db.Column(db.String, nullable=True)
     corsi = db.relationship("Corso")
     materie = db.relationship("Abilitato", backref='utente', lazy='dynamic', cascade='delete')
     impegno = db.relationship("Impegno")
-    orari = db.Column(db.String)
 
     def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username):
         self.username = username
@@ -39,7 +37,6 @@ class User(db.Model):
         self.nome = nome
         self.cognome = cognome
         self.classe = classe
-        self.notifiche = 0
         self.tipo = tipo
         self.telegram_username = telegram_username
 
@@ -72,10 +69,14 @@ class Materia(db.Model):
     professore = db.Column(db.String)
     impegno = db.relationship("Impegno")
     utente = db.relationship("Abilitato", backref="materia", lazy='dynamic', cascade='delete')
+    giorno_settimana = db.Column(db.Integer)
+    ora = db.Column(db.String)
 
-    def __init__(self, nome, professore):
+    def __init__(self, nome, professore, giorno, ora):
         self.nome = nome
         self.professore = professore
+        self.giorno_settimana = giorno
+        self.ora = ora
 
     def __repr__(self):
         return "<Materia {}>".format(self.nome)
@@ -84,23 +85,22 @@ class Materia(db.Model):
 class Impegno(db.Model):
     __tablename__ = 'impegno'
     iid = db.Column(db.Integer, primary_key=True, unique=True)
-    appuntamento = db.Column(db.DateTime)
-    status = db.Column(db.Integer)
-    # 0 = non visualizzato, 1 = approvato, 2 = non approvato 3 = rilanciato
     corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'))
     stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'))
     mat_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
     materia = db.Column(db.String)
     peer = db.Column(db.String)
+    giorno = db.Column(db.Integer)
+    ora = db.Column(db.String)
 
-    def __init__(self, appuntamento, peer_id, stud_id, mat_id, materia, peer):
-        self.appuntamento = appuntamento
-        self.status = 0
+    def __init__(self, peer_id, stud_id, mat_id, materia, peer, giorno, ora):
         self.peer_id = peer_id
         self.stud_id = stud_id
         self.mat_id = mat_id
         self.materia = materia
         self.peer = peer
+        self.giorno = giorno
+        self.ora = ora
 
 
 class Messaggio(db.Model):
@@ -265,13 +265,13 @@ def page_dashboard():
         corsi = Corso.query.join(Materia).join(User).all()
         impegni = Impegno.query.filter_by(peer=utente.username).join(Materia).all()
         lezioni = Impegno.query.filter_by(stud_id=utente.uid).join(Materia).all()
-        oggi = datetime.today()
-        oggi = oggi - timedelta(days=1)
+        oggi = datetime.today().weekday()
+        oggi = oggi + 1
         for impegno in impegni:
-            if impegno.appuntamento < oggi:
+            if impegno.giorno == oggi:
                 db.session.delete(impegno)
         for lezione in lezioni:
-            if lezione.appuntamento < oggi:
+            if lezione.giorno == oggi:
                 db.session.delete(lezione)
         db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
@@ -485,7 +485,7 @@ def page_materia_add():
                 stringa = "L'utente " + utente.username + " ha creato una materia "
                 nuovorecord = Log(stringa, datetime.today())
                 db.session.add(nuovorecord)
-                nuovamateria = Materia(request.form["nome"], request.form["professore"])
+                nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"], request.form['ora'])
                 db.session.add(nuovamateria)
                 db.session.commit()
                 return redirect(url_for('page_materia_list'))
@@ -523,6 +523,8 @@ def page_materia_edit(mid):
                 materia = Materia.query.get_or_404(mid)
                 materia.nome = request.form['nome']
                 materia.professore = request.form['professore']
+                materia.giorno_settimana = request.form['giorno']
+                materia.ora = request.form['ora']
                 db.session.commit()
                 return redirect(url_for('page_materia_list'))
 
@@ -612,146 +614,20 @@ def page_corso_join(cid):
         abort(403)
     else:
         utente = find_user(session['username'])
-        if request.method == 'GET':
-            return render_template("Corso/join.htm", utente=utente, cid=cid)
-        else:
-            stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            corso = Corso.query.get_or_404(cid)
-            yyyy, mm, dd = request.form["data"].split("-", 2)
-            hh, mi = request.form["ora"].split(":", 1)
-            data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
-            peer = User.query.get_or_404(corso.pid)
-            materia = Materia.query.get_or_404(corso.materia_id)
-            nuovoimpegno = Impegno(data, corso.cid, utente.uid, corso.materia_id, materia.nome, peer.username)
-            peer.notifiche = peer.notifiche+1
-            db.session.add(nuovoimpegno)
-            db.session.commit()
-            sendemail(peer.username, 1, str(data), peer.nome, materia.nome, materia.nome)
+        impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
+        if len(impegni) > 0:
             return redirect(url_for('page_dashboard'))
-
-
-@app.route('/impegno_rilancia/<int:iid>', methods=['GET', 'POST'])
-def page_impegno_rilancia(iid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
-        else:
-            if request.method == 'GET':
-                return render_template("Notifica/rilancia.htm", iid=iid)
-            else:
-                stringa = "L'utente " + utente.username + " ha creato il rinvio " + str(iid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                impegno = Impegno.query.get_or_404(iid)
-                yyyy, mm, dd = request.form["data"].split("-", 2)
-                hh, mi = request.form["ora"].split(":", 1)
-                data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
-                impegno.appuntamento = data
-                impegno.status = 3
-                db.session.commit()
-                studente = User.query.get_or_404(impegno.stud_id)
-                sendemail(studente.username, 4, str(data), impegno.peer, impegno.peer, impegno.peer)
-                return redirect(url_for('page_notifiche'))
-
-
-@app.route('/notifiche')
-def page_notifiche():
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
-        else:
-            impegni = Impegno.query.filter_by(peer=utente.username).all()
-            utente.notifiche = 0
-            db.session.commit()
-            return render_template("Notifica/list.htm", utente=utente, impegni=impegni)
-
-
-@app.route('/impegno_accept/<int:iid>')
-def page_notifiche_accept(iid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha accettato la ripetizione " + str(iid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            impegno = Impegno.query.get_or_404(iid)
-            impegno.status = 1
-            db.session.commit()
-            studente = User.query.get_or_404(impegno.stud_id)
-            sendemail(studente.username, 3, str(impegno.appuntamento), utente.nome, impegno.materia, impegno.materia)
-            return redirect(url_for('page_notifiche'))
-
-
-@app.route('/impegno_del/<int:iid>', methods=['GET', 'POST'])
-def page_notifiche_del(iid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
-        else:
-            if request.method == 'GET':
-                return render_template("Notifica/del.htm", utente=utente, iid=iid)
-            else:
-                stringa = "L'utente " + utente.username + " ha rimosso la richiesta " + str(iid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                impegno = Impegno.query.get_or_404(iid)
-                studente = User.query.get_or_404(impegno.stud_id)
-                db.session.delete(impegno)
-                db.session.commit()
-                sendemail(studente.username, 2, str(impegno.appuntamento), utente.nome, impegno.materia, request.form['testo'])
-                return redirect(url_for('page_notifiche'))
-
-
-@app.route('/proposta_accept/<int:iid>')
-def page_proposta_accept(iid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        impegno = Impegno.query.get_or_404(iid)
-        if impegno.stud_id != utente.uid and impegno.status == 3:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha accettato il rinvio " + str(iid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            impegno.status = 1
-            sendemail(impegno.peer, 5, str(impegno.appuntamento), utente.username, impegno.materia, impegno.materia)
-            db.session.commit()
-            return redirect(url_for("page_dashboard"))
-
-
-@app.route('/proposta_delete/<int:iid>')
-def page_proposta_delete(iid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        impegno = Impegno.query.get_or_404(iid)
-        if impegno.stud_id != utente.uid and impegno.status == 3:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha rinunciato al rinvio " + str(iid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            db.session.remove(impegno)
-            db.session.commit()
-            return redirect(url_for("page_dashboard"))
+        stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        corso = Corso.query.get_or_404(cid)
+        peer = User.query.get_or_404(corso.pid)
+        materia = Materia.query.get_or_404(corso.materia_id)
+        nuovoimpegno = Impegno(corso.cid, utente.uid, corso.materia_id, materia.nome, peer.username,
+                               materia.giorno_settimana, materia.ora)
+        db.session.add(nuovoimpegno)
+        db.session.commit()
+        return redirect(url_for('page_dashboard'))
 
 
 @app.route('/server_log')
