@@ -73,8 +73,8 @@
                                 </thead>
                                 {% for impegno in impegni %}
                                     <tr>
-                                        <td>{{ impegno.materia }}</td>
-                                        <td>{{ impegno.peer }}</td>
+                                        <td>{{ impegno.nome }}</td>
+                                        <td><a href="/user_inspect/{{ impegno.corso.pid }}">Test</a></td>
                                         {% if impegno.appuntamento %}
                                             <td>{{ impegno.appuntamento }}</td>
                                         {% else %}
@@ -91,14 +91,14 @@
                                 {% endfor %}
                                 {% for lezione in lezioni %}
                                     <tr>
-                                        <td>{{ lezione.materia.nome }}</td>
-                                        <td>{{ lezione.peer }}</td>
-                                        <td>{% if lezione.giorno == 1 %}Lunedì, {% elif lezione.giorno == 2 %}
-                                            Martedì, {% elif lezione.giorno == 3 %}
-                                            Mercoledì, {% elif lezione.giorno == 4 %}
-                                            Giovedì, {% elif lezione.giorno == 5 %}
-                                            Venerdì, {% endif %}{{ lezione.ora }}</td>
-                                        <td><a href="/user_inspect/{{ lezione.stud_id }}"><i class="fa fa-search"
+                                        <td>{{ lezione[8] }}</td>
+                                        <td></td>
+                                        <td>{% if lezione[4] == 1 %}Lunedì, {% elif lezione[4] == 2 %}
+                                            Martedì, {% elif lezione[4] == 3 %}
+                                            Mercoledì, {% elif lezione[4] == 4 %}
+                                            Giovedì, {% elif lezione[4] == 5 %}
+                                            Venerdì, {% endif %}{{ lezione[5] }}</td>
+                                        <td><a href="/user_inspect/{{ lezione[2] }}"><i class="fa fa-search"
                                                                                              aria-hidden="true"></i></a>
                                         </td>
                                     </tr>

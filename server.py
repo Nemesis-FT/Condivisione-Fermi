@@ -3,10 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 import bcrypt
 from datetime import datetime, date, timedelta
 import os
-import smtplib
 
 app = Flask(__name__)
-#app.secret_key = os.environ["flask_secret_key"]
+# app.secret_key = os.environ["flask_secret_key"]
 app.secret_key = "ciao"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -19,15 +18,15 @@ db = SQLAlchemy(app)
 class User(db.Model):
     __tablename__ = 'user'
     uid = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, unique=True)
-    passwd = db.Column(db.LargeBinary)
+    username = db.Column(db.String, unique=True, nullable=False)
+    passwd = db.Column(db.LargeBinary, nullable=False)
     nome = db.Column(db.String)
     cognome = db.Column(db.String)
     classe = db.Column(db.String)
-    tipo = db.Column(db.Integer)
+    tipo = db.Column(db.Integer, nullable=False)
     # 0 = utente normale, 1 = peer, 2 = professore, 3 = amministratore
-    telegram_username = db.Column(db.String, nullable=True)
-    corsi = db.relationship("Corso")
+    telegram_username = db.Column(db.String)
+    corsi = db.relationship("Corso", backref="peer")
     materie = db.relationship("Abilitato", backref='utente', lazy='dynamic', cascade='delete')
     impegno = db.relationship("Impegno")
 
@@ -43,13 +42,16 @@ class User(db.Model):
     def __repr__(self):
         return "<User {}>".format(self.username, self.passwd, self.nome, self.cognome, self.classe)
 
+    def __str__(self):
+        return self.nome + " " + self.cognome
+
 
 class Corso(db.Model):
     __tablename__ = 'corso'
     cid = db.Column(db.Integer, primary_key=True)
-    pid = db.Column(db.Integer, db.ForeignKey('user.uid'))
+    pid = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
     argomenti = db.Column(db.String)
-    materia_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
+    materia_id = db.Column(db.Integer, db.ForeignKey('materia.mid'), nullable=False)
     impegno = db.relationship("Impegno")
     materia = db.relationship("Materia")
     tipo = db.Column(db.Integer)  # 0 = ripetizione studente, 1 = recupero professore
@@ -73,12 +75,11 @@ class Corso(db.Model):
 class Materia(db.Model):
     __tablename__ = "materia"
     mid = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String)
-    professore = db.Column(db.String)
-    impegno = db.relationship("Impegno")
+    nome = db.Column(db.String, nullable=False)
+    professore = db.Column(db.String, nullable=False)
     utente = db.relationship("Abilitato", backref="materia", lazy='dynamic', cascade='delete')
-    giorno_settimana = db.Column(db.Integer)
-    ora = db.Column(db.String)
+    giorno_settimana = db.Column(db.Integer)  # Datetime no eh
+    ora = db.Column(db.String)  # Time no eh
 
     def __init__(self, nome, professore, giorno, ora):
         self.nome = nome
@@ -93,22 +94,17 @@ class Materia(db.Model):
 class Impegno(db.Model):
     __tablename__ = 'impegno'
     iid = db.Column(db.Integer, primary_key=True, unique=True)
-    corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'))
-    stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'))
-    mat_id = db.Column(db.Integer, db.ForeignKey('materia.mid'))
-    materia = db.Column(db.String)
-    peer = db.Column(db.String)
-    giorno = db.Column(db.Integer)
-    ora = db.Column(db.String)
-    cid = db.Column(db.Integer)
-    appuntamento = db.Column(db.DateTime)
+    corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'), nullable=False)
+    stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
+    studente = db.relationship("User")
+    giorno = db.Column(db.Integer, nullable=False)
+    ora = db.Column(db.String, nullable=False)
+    appuntamento = db.Column(db.DateTime)  # ridondante? decisamente
 
-    def __init__(self, peer_id, stud_id, mat_id, materia, peer, giorno, ora, corso_id):
-        self.peer_id = peer_id
+    def __init__(self, stud_id, mat_id, materia, giorno, ora, corso_id):
         self.stud_id = stud_id
         self.mat_id = mat_id
         self.materia = materia
-        self.peer = peer
         self.giorno = giorno
         self.ora = ora
         self.corso_id = corso_id
@@ -116,9 +112,9 @@ class Impegno(db.Model):
 
 class Messaggio(db.Model):
     __tablename__ = 'messaggio'
-    mid = db.Column(db.Integer, primary_key=True, unique=True)
+    mid = db.Column(db.Integer, primary_key=True)
     testo = db.Column(db.String)
-    data = db.Column(db.Date)
+    data = db.Column(db.Date)  # FIXME: fammi diventare un datetime e al limite visualizza solo la data
     tipo = db.Column(db.Integer)  # 1 = success 2 = primary 3 = warning
 
     def __init__(self, testo, data, tipo):
@@ -128,6 +124,7 @@ class Messaggio(db.Model):
 
 
 class Abilitato(db.Model):
+    # Tabella di associazione
     __tablename__ = "abilitazioni"
 
     mid = db.Column(db.Integer, db.ForeignKey('materia.mid'), primary_key=True)
@@ -164,6 +161,7 @@ def login(username, password):
 
 
 def find_user(username):
+    # Perchè le query non vanno di moda
     user = User.query.all()
     for utenze in user:
         if username == utenze.username:
@@ -244,19 +242,24 @@ def page_dashboard():
     if 'username' not in session:
         abort(403)
     else:
+        print("Ciao")
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
-        impegni = Impegno.query.filter_by(peer=utente.username).join(Materia).all()
-        lezioni = Impegno.query.filter_by(stud_id=utente.uid).join(Materia).all()
+        query1="SELECT impegno.*, materia.nome FROM  impegno JOIN materia ON impegno.mat_id = materia.mid JOIN user ON impegno.stud_id = user.uid JOIN corso on impegno.corso_id = corso.cid WHERE corso.pid={}".format(utente.uid)
+        impegni = db.engine.execute(query1)
+        query2="SELECT impegno.*, materia.nome FROM  impegno JOIN materia ON impegno.mat_id = materia.mid JOIN user ON impegno.stud_id = user.uid JOIN corso on impegno.corso_id = corso.cid WHERE impegno.stud_id={}".format(utente.uid)
+        lezioni = db.engine.execute(query2)
+        print(query1)
+        prova = db.engine.execute("SELECT impegno.* FROM impegno")
         oggi = datetime.today().weekday()
         oggi = oggi + 1
         for impegno in impegni:
-            print(impegno.materia)
+            print(impegno[8])
             if impegno.giorno == oggi:
                 db.session.delete(impegno)
         for lezione in lezioni:
-            print(lezione.materia)
+            print(lezione[8])
             if lezione.giorno == oggi:
                 db.session.delete(lezione)
         db.session.commit()
@@ -650,15 +653,12 @@ def page_corso_join(cid):
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
         if corso.tipo == 0:
-            peer = User.query.get_or_404(corso.pid)
-            nuovoimpegno = Impegno(corso.pid, utente.uid, corso.materia_id, corso.materia.nome, peer.username,
+            nuovoimpegno = Impegno(utente.uid, corso.materia_id, corso.materia.nome,
                                    corso.materia.giorno_settimana, corso.materia.ora, cid)
         else:
-            peer = User.query.get_or_404(corso.pid)
-            nuovoimpegno = Impegno(corso.pid, utente.uid, corso.materia_id, corso.materia.nome, peer.username,
+            nuovoimpegno = Impegno(utente.uid, corso.materia_id, corso.materia.nome,
                                    corso.materia.giorno_settimana, corso.materia.ora, cid)
             print(corso.materia.nome)
-            #  TODO Togliere quel ridicolo campo cid che non fa una mazza
             nuovoimpegno.appuntamento = corso.appuntamento
         db.session.add(nuovoimpegno)
         db.session.commit()
