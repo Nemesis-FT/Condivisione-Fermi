@@ -91,15 +91,19 @@
                                 {% endfor %}
                                 {% for lezione in lezioni %}
                                     <tr>
-                                        <td>{{ lezione[8] }}</td>
+                                        <td>{{ lezione[4] }}</td>
                                         <td></td>
-                                        <td>{% if lezione[4] == 1 %}Lunedì, {% elif lezione[4] == 2 %}
-                                            Martedì, {% elif lezione[4] == 3 %}
-                                            Mercoledì, {% elif lezione[4] == 4 %}
-                                            Giovedì, {% elif lezione[4] == 5 %}
-                                            Venerdì, {% endif %}{{ lezione[5] }}</td>
-                                        <td><a href="/user_inspect/{{ lezione[2] }}"><i class="fa fa-search"
-                                                                                             aria-hidden="true"></i></a>
+                                        {% if lezione[7] %}
+                                            <td>{{ lezione[7] }}</td>
+                                        {% else %}
+                                            <td>{% if lezione[5] == 1 %}Lunedì, {% elif lezione[5] == 2 %}
+                                                Martedì, {% elif lezione[5] == 3 %}
+                                                Mercoledì, {% elif lezione[5] == 4 %}
+                                                Giovedì, {% elif lezione[5] == 5 %}
+                                                Venerdì, {% endif %}{{ lezione[6] }}</td>
+                                        {% endif %}
+                                        <td><a href="/user_inspect/{{ lezione[1] }}"><i class="fa fa-search"
+                                                                                        aria-hidden="true"></i></a>
                                         </td>
                                     </tr>
                                 {% endfor %}

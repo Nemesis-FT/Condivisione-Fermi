@@ -1,5 +1,6 @@
 from flask import Flask, session, url_for, redirect, request, render_template, abort
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import text
 import bcrypt
 from datetime import datetime, date, timedelta
 import os
@@ -97,17 +98,7 @@ class Impegno(db.Model):
     corso_id = db.Column(db.Integer, db.ForeignKey('corso.cid'), nullable=False)
     stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
     studente = db.relationship("User")
-    giorno = db.Column(db.Integer, nullable=False)
-    ora = db.Column(db.String, nullable=False)
     appuntamento = db.Column(db.DateTime)  # ridondante? decisamente
-
-    def __init__(self, stud_id, mat_id, materia, giorno, ora, corso_id):
-        self.stud_id = stud_id
-        self.mat_id = mat_id
-        self.materia = materia
-        self.giorno = giorno
-        self.ora = ora
-        self.corso_id = corso_id
 
 
 class Messaggio(db.Model):
@@ -161,11 +152,8 @@ def login(username, password):
 
 
 def find_user(username):
-    # Perchè le query non vanno di moda
-    user = User.query.all()
-    for utenze in user:
-        if username == utenze.username:
-            return utenze
+    return User.query.filter_by(username=username).first()
+
 
 
 # Gestori Errori
@@ -239,29 +227,29 @@ def page_register():
 
 @app.route('/dashboard')
 def page_dashboard():
-    if 'username' not in session:
+    if 'username' not in session or 'username' is None:
         abort(403)
     else:
         print("Ciao")
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
-        query1="SELECT impegno.*, materia.nome FROM  impegno JOIN materia ON impegno.mat_id = materia.mid JOIN user ON impegno.stud_id = user.uid JOIN corso on impegno.corso_id = corso.cid WHERE corso.pid={}".format(utente.uid)
-        impegni = db.engine.execute(query1)
-        query2="SELECT impegno.*, materia.nome FROM  impegno JOIN materia ON impegno.mat_id = materia.mid JOIN user ON impegno.stud_id = user.uid JOIN corso on impegno.corso_id = corso.cid WHERE impegno.stud_id={}".format(utente.uid)
-        lezioni = db.engine.execute(query2)
+        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+        impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
+        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+        lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
         print(query1)
         prova = db.engine.execute("SELECT impegno.* FROM impegno")
         oggi = datetime.today().weekday()
         oggi = oggi + 1
         for impegno in impegni:
-            print(impegno[8])
-            if impegno.giorno == oggi:
-                db.session.delete(impegno)
+            print(impegno)
+            #if impegno.giorno == oggi:
+            #    db.session.delete(impegno)
         for lezione in lezioni:
-            print(lezione[8])
-            if lezione.giorno == oggi:
-                db.session.delete(lezione)
+            print(lezione)
+            #if lezione.giorno == oggi:
+            #    db.session.delete(lezione)
         db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
                                lezioni=lezioni)
@@ -652,12 +640,9 @@ def page_corso_join(cid):
         stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
-        if corso.tipo == 0:
-            nuovoimpegno = Impegno(utente.uid, corso.materia_id, corso.materia.nome,
-                                   corso.materia.giorno_settimana, corso.materia.ora, cid)
-        else:
-            nuovoimpegno = Impegno(utente.uid, corso.materia_id, corso.materia.nome,
-                                   corso.materia.giorno_settimana, corso.materia.ora, cid)
+        nuovoimpegno = Impegno(studente=utente,
+                               corso_id=cid)
+        if corso.tipo != 0:
             print(corso.materia.nome)
             nuovoimpegno.appuntamento = corso.appuntamento
         db.session.add(nuovoimpegno)
