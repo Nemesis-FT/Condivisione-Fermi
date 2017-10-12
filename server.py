@@ -230,27 +230,41 @@ def page_dashboard():
     if 'username' not in session or 'username' is None:
         abort(403)
     else:
-        print("Ciao")
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
-        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
         impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
-        print(query1)
-        prova = db.engine.execute("SELECT impegno.* FROM impegno")
-        oggi = datetime.today().weekday()
-        oggi = oggi + 1
-        for impegno in impegni:
-            print(impegno)
-            #if impegno.giorno == oggi:
-            #    db.session.delete(impegno)
         for lezione in lezioni:
             print(lezione)
-            #if lezione.giorno == oggi:
-            #    db.session.delete(lezione)
-        db.session.commit()
+        # oggi = datetime.today().weekday()
+        # oggi = oggi + 1
+        # for impegno in impegni:
+        #     if not impegno[7]:
+        #         if impegno[6] == oggi:
+        #             db.session.delete(impegno)
+        #     else:
+        #         print(impegno[7])
+        #         purifica, spazzatura = impegno[7].split(" ", 1)
+        #         yyyy, mm, dd, = purifica.split("-", 2)
+        #         data = datetime(int(yyyy), int(mm), int(dd))
+        #         if data > datetime.today()+timedelta(days=1):
+        #             db.session.delete(impegno)
+        # for lezione in lezioni:
+        #     if not lezione[7]:
+        #         if lezione[6] == oggi:
+        #             db.session.delete(lezione)
+        #     else:
+        #         print(lezione)
+        #         print(lezione[7])
+        #         purifica, spazzatura = lezione[7].split(" ", 1)
+        #         yyyy, mm, dd, = purifica.split("-", 2)
+        #         data = datetime(int(yyyy), int(mm), int(dd))
+        #         if data > datetime.today()+timedelta(days=1):
+        #             db.session.delete(lezione)
+        # db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
                                lezioni=lezioni)
 
@@ -631,12 +645,13 @@ def page_corso_join(cid):
     else:
         utente = find_user(session['username'])
         impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
-        #for impegno in impegni:
-        #    if impegno.stud_id == utente.uid and impegno.corso_id == cid:
-        #        return redirect(url_for('page_dashboard'))
+        for impegno in impegni:
+            if impegno.stud_id == utente.uid and impegno.corso_id == cid:
+                return redirect(url_for('page_dashboard'))
         corso = Corso.query.get_or_404(cid)
-        if corso.occupati > corso.limite:
+        if corso.occupati >= corso.limite:
             return redirect(url_for('page_dashboard'))
+        corso.occupati = corso.occupati+1
         stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
@@ -663,12 +678,23 @@ def page_log_view():
             return render_template("logs.htm", logs=logs, utente=utente)
 
 
+@app.route('/corso_membri/<int:cid>')
+def corso_membri(cid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        query = text("SELECT corso.*, impegno.stud_id FROM corso JOIN impegno ON corso.cid = impegno.corso_id WHERE corso.cid=:x;")
+        utenti = db.session.execute(query, {"x": cid}).fetchall()
+        return render_template("Corso/membri.htm", utente=utente, entita=utenti)
+
+
 if __name__ == "__main__":
     # Se non esiste il database, crealo e inizializzalo!
     if not os.path.isfile("db.sqlite"):
         db.create_all()
         db.session.commit()
-    nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.", datetime.today())
+    nuovrecord = Log("Database di Condivisione creato. Condivisione è un programma di FermiTech Softworks.", datetime.today())
     db.session.add(nuovrecord)
     db.session.commit()
     app.run()

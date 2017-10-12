@@ -12,7 +12,8 @@
             impegni e modificare il tuo profilo.{% elif utente.tipo == 1 %}In questa pagina potrai esplorare e creare
             corsi, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 2 %}Da questa pagina
             le sarà possibile abilitare gli utenti all'insegnamento, creare corsi e materie. {% elif utente.tipo == 3 %}
-            Da questa pagina le sarà possibile amministrare la piattaforma.{% endif %}</p>
+            Da questa pagina le sarà possibile creare materie, gestire gli utenti e visualizzare i log di
+            sistema.{% endif %}</p>
     </div>
     <br>
     <div class="row">
@@ -66,47 +67,57 @@
                                 <thead>
                                 <tr>
                                     <th>Materia</th>
-                                    <th>Peer</th>
                                     <th>Giorno</th>
                                     <th>Azioni</th>
                                 </tr>
                                 </thead>
-                                {% for impegno in impegni %}
-                                    <tr>
-                                        <td>{{ impegno.nome }}</td>
-                                        <td><a href="/user_inspect/{{ impegno.corso.pid }}">Test</a></td>
-                                        {% if impegno.appuntamento %}
-                                            <td>{{ impegno.appuntamento }}</td>
-                                        {% else %}
-                                            <td>{% if impegno.giorno == 1 %}Lunedì, {% elif impegno.giorno == 2 %}
-                                                Martedì, {% elif impegno.giorno == 3 %}
-                                                Mercoledì, {% elif impegno.giorno == 4 %}
-                                                Giovedì, {% elif impegno.giorno == 5 %}
-                                                Venerdì, {% endif %}{{ impegno.ora }}</td>
-                                        {% endif %}
-                                        <td><a href="/user_inspect/{{ impegno.stud_id }}"><i class="fa fa-search"
+                                {% if impegni %}
+                                    {% for impegno in impegni %}
+                                        <tr>
+                                            <td>{{ impegno[4] }}</td>
+                                            {% if impegno[7] %}
+                                                <td>{{ impegno[7] }}</td>
+                                            {% else %}
+                                                <td>{% if impegno[5] == 1 %}Lunedì, {% elif impegno[5] == 2 %}
+                                                    Martedì, {% elif impegno[5] == 3 %}
+                                                    Mercoledì, {% elif impegno[5] == 4 %}
+                                                    Giovedì, {% elif impegno[5] == 5 %}
+                                                    Venerdì, {% endif %}{{ impegno[6] }}</td>
+                                            {% endif %}
+                                            <td><a href="/user_inspect/{{ impegno[10] }}"><i class="fa fa-graduation-cap"
+                                                                                            aria-hidden="true"></i></a>
+                                                <a href="/user_inspect/{{ impegno[2] }}"><i class="fa fa-users"
                                                                                              aria-hidden="true"></i></a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                                {% for lezione in lezioni %}
-                                    <tr>
-                                        <td>{{ lezione[4] }}</td>
-                                        <td></td>
-                                        {% if lezione[7] %}
-                                            <td>{{ lezione[7] }}</td>
-                                        {% else %}
-                                            <td>{% if lezione[5] == 1 %}Lunedì, {% elif lezione[5] == 2 %}
-                                                Martedì, {% elif lezione[5] == 3 %}
-                                                Mercoledì, {% elif lezione[5] == 4 %}
-                                                Giovedì, {% elif lezione[5] == 5 %}
-                                                Venerdì, {% endif %}{{ lezione[6] }}</td>
-                                        {% endif %}
-                                        <td><a href="/user_inspect/{{ lezione[1] }}"><i class="fa fa-search"
-                                                                                        aria-hidden="true"></i></a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
+                                                <a href="/corso_membri/{{ impegno[1] }}"><i class="fa fa-search"
+                                                                                             aria-hidden="true"></i></a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
+                                {% if lezioni %}
+                                    {% for lezione in lezioni %}
+                                        <tr>
+                                            <td>{{ lezione[4] }}</td>
+                                            <td></td>
+                                            {% if lezione[7] %}
+                                                <td>{{ lezione[7] }}</td>
+                                            {% else %}
+                                                <td>{% if lezione[5] == 1 %}Lunedì, {% elif lezione[5] == 2 %}
+                                                    Martedì, {% elif lezione[5] == 3 %}
+                                                    Mercoledì, {% elif lezione[5] == 4 %}
+                                                    Giovedì, {% elif lezione[5] == 5 %}
+                                                    Venerdì, {% endif %}{{ lezione[6] }}</td>
+                                            {% endif %}
+                                            <td><a href="/user_inspect/{{ lezione[10] }}"><i class="fa fa-graduation-cap"
+                                                                                            aria-hidden="true"></i></a>
+                                                <a href="/user_inspect/{{ lezione[2] }}"><i class="fa fa-users"
+                                                                                             aria-hidden="true"></i></a>
+                                                <a href="/corso_membri/{{ lezione[1] }}"><i class="fa fa-search"
+                                                                                             aria-hidden="true"></i>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
                             </table>
                         </div>
                     </div>
@@ -134,6 +145,7 @@
                                     <th>Peer</th>
                                     <th>Argomenti</th>
                                     <th>Giorno</th>
+                                    <th>Stato</th>
                                     <th>Azioni</th>
                                 </tr>
                                 </thead>
@@ -151,6 +163,19 @@
                                                 Mercoledì, {% elif corso.materia.giorno_settimana == 4 %}
                                                 Giovedì, {% elif corso.materia.giorno_settimana == 5 %}
                                                 Venerdì, {% endif %}{{ corso.materia.ora }}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div {% if (corso.occupati/corso.limite)*100 < 50 %}class="progress-bar bg-success"
+                                                         {% elif (corso.occupati/corso.limite)*100 < 75 %}class="progress-bar bg-warning"
+                                                         {% else %}class="progress-bar bg-danger" {% endif %}
+                                                         role="progressbar"
+                                                         style="width: {{ (corso.occupati/corso.limite)*100 }}%"
+                                                         aria-valuenow="{{ corso.occupati }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="/{{ corso.limite }}">{{ (corso.occupati/corso.limite)*100//1 }}%
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td>{% if corso.pid == utente.uid %}
                                                 <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
                                                                                         aria-hidden="true"></i></a>  {% elif utente.tipo==2 %}
@@ -189,6 +214,7 @@
                                     <th>Professore</th>
                                     <th>Argomenti</th>
                                     <th>Data</th>
+                                    <th>Stato</th>
                                     <th>Azioni</th>
                                 </tr>
                                 </thead>
@@ -201,6 +227,16 @@
                                             </td>
                                             <td>{{ corso.argomenti }}</td>
                                             <td>{{ corso.appuntamento }}
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar" role="progressbar"
+                                                         style="width: {{ (corso.occupati/corso.limite)*100 }}%"
+                                                         aria-valuenow="{{ corso.occupati }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="/{{ corso.limite }}">{{ (corso.occupati/corso.limite)*100//1 }}%
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td>{% if corso.pid == utente.uid %}
                                                 <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
                                                                                         aria-hidden="true"></i></a>  {% elif utente.tipo==2 %}

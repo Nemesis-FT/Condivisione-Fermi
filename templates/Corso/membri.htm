@@ -1,0 +1,13 @@
+{% extends "stampo.htm" %}
+{% block title %}Utenti corso - Condivisione{% endblock %}
+{% block content %}
+    <h1>Studenti del corso</h1>
+    {% for oggetto in entita %}
+        <div class="card" style="width: 100%;">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><a href="/user_inspect/{{ oggetto[8] }}">Ispeziona</a>
+                </li>
+            </ul>
+        </div>
+    {% endfor %}
+{% endblock %}
