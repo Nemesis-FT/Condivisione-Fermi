@@ -550,24 +550,22 @@ def page_materia_del(mid):
         if utente.tipo < 2:
             abort(403)
         else:
+            materia = Materia.query.get_or_404(mid)
+            corsi = Corso.query.filter_by(materia_id=mid).all()
+            impegni = Impegno.query.filter_by(mat_id=mid).all()
             stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
-            materia = Materia.query.get_or_404(mid)
-            corsi = Corso.query.all()
-            impegni = Impegno.query.all()
             for corso in corsi:
-                if corso.materia_id == mid:
-                    db.session.delete(corso)
-                    stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
+                db.session.delete(corso)
+                stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
             for impegno in impegni:
-                if impegno.mat_id == mid:
-                    db.session.delete(impegno)
-                    stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
+                db.session.delete(impegno)
+                stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
             db.session.delete(materia)
             db.session.commit()
             return redirect(url_for('page_dashboard'))
