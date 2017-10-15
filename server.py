@@ -605,7 +605,11 @@ def page_corso_add():
                     nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
                     yyyy, mm, dd = request.form["data"].split("-", 2)
                     hh, mi = request.form["ora"].split(":", 1)
-                    data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+                    try:
+                        data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+                    except ValueError:
+                        # TODO: metti un errore più carino
+                        abort(400)
                     nuovocorso.appuntamento = data
                     nuovocorso.limite = request.form["massimo"]
                     db.session.add(nuovocorso)
