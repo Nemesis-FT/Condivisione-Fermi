@@ -550,24 +550,22 @@ def page_materia_del(mid):
         if utente.tipo < 2:
             abort(403)
         else:
+            materia = Materia.query.get_or_404(mid)
+            corsi = Corso.query.filter_by(materia_id=mid).all()
+            impegni = Impegno.query.filter_by(mat_id=mid).all()
             stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
-            materia = Materia.query.get_or_404(mid)
-            corsi = Corso.query.all()
-            impegni = Impegno.query.all()
             for corso in corsi:
-                if corso.materia_id == mid:
-                    db.session.delete(corso)
-                    stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
+                db.session.delete(corso)
+                stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
             for impegno in impegni:
-                if impegno.mat_id == mid:
-                    db.session.delete(impegno)
-                    stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
+                db.session.delete(impegno)
+                stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
             db.session.delete(materia)
             db.session.commit()
             return redirect(url_for('page_dashboard'))
@@ -605,7 +603,11 @@ def page_corso_add():
                     nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
                     yyyy, mm, dd = request.form["data"].split("-", 2)
                     hh, mi = request.form["ora"].split(":", 1)
-                    data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+                    try:
+                        data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+                    except ValueError:
+                        # TODO: metti un errore più carino
+                        abort(400)
                     nuovocorso.appuntamento = data
                     nuovocorso.limite = request.form["massimo"]
                     db.session.add(nuovocorso)
