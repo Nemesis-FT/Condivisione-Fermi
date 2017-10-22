@@ -7,7 +7,12 @@ import os
 
 app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
-app.secret_key = "ciao"
+chiavi = open("configurazione.txt", 'r')
+dati = chiavi.readline()
+appkey, telegramkey = dati.split("|", 1)
+print(appkey)
+print(telegramkey)
+app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -21,8 +26,8 @@ class User(db.Model):
     uid = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True, nullable=False)
     passwd = db.Column(db.LargeBinary, nullable=False)
-    nome = db.Column(db.String)
-    cognome = db.Column(db.String)
+    nome = db.Column(db.String, nullable=False)
+    cognome = db.Column(db.String, nullable=False)
     classe = db.Column(db.String)
     tipo = db.Column(db.Integer, nullable=False)
     # 0 = utente normale, 1 = peer, 2 = professore, 3 = amministratore
@@ -51,11 +56,11 @@ class Corso(db.Model):
     __tablename__ = 'corso'
     cid = db.Column(db.Integer, primary_key=True)
     pid = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
-    argomenti = db.Column(db.String)
+    argomenti = db.Column(db.String, nullable=False)
     materia_id = db.Column(db.Integer, db.ForeignKey('materia.mid'), nullable=False)
     impegno = db.relationship("Impegno")
     materia = db.relationship("Materia")
-    tipo = db.Column(db.Integer)  # 0 = ripetizione studente, 1 = recupero professore
+    tipo = db.Column(db.Integer,nullable=False)  # 0 = ripetizione studente, 1 = recupero professore
     appuntamento = db.Column(db.DateTime)
     limite = db.Column(db.Integer)
     occupati = db.Column(db.Integer)
@@ -434,6 +439,14 @@ def page_user_del(uid):
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
+            corsi = Corso.query.filter_by(pid=entita.uid).all()
+            for corso in corsi:
+                stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
+                for oggetti in corso.impegno:
+                    db.session.delete(oggetti)
+                db.session.delete(corso)
             for materia in entita.materie:
                 stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
                 nuovorecord = Log(stringa, datetime.today())
@@ -552,18 +565,14 @@ def page_materia_del(mid):
         else:
             materia = Materia.query.get_or_404(mid)
             corsi = Corso.query.filter_by(materia_id=mid).all()
-            impegni = Impegno.query.filter_by(mat_id=mid).all()
             stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
             for corso in corsi:
+                for impegni in corso.impegno:
+                    db.session.delete(impegni)
                 db.session.delete(corso)
                 stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-            for impegno in impegni:
-                db.session.delete(impegno)
-                stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
                 nuovorecord = Log(stringa, datetime.today())
                 db.session.add(nuovorecord)
             db.session.delete(materia)

@@ -40,7 +40,7 @@
                                             {{ messaggio.testo }}<br>{{ messaggio.data }}
                                         </div>
                                         <div class="col-md-1">
-                                            {% if utente.tipo == 2 %}
+                                            {% if utente.tipo == 3 %}
                                                 <a href="/message_del/{{ messaggio.mid }}" class="alert-link"><i
                                                         class="fa fa-times" aria-hidden="true"></i></a>
                                             {% endif %}
@@ -178,7 +178,7 @@
                                             </td>
                                             <td>{% if corso.pid == utente.uid %}
                                                 <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
-                                                                                        aria-hidden="true"></i></a>  {% elif utente.tipo==2 %}
+                                                                                        aria-hidden="true"></i></a>  {% elif utente.tipo==3 %}
                                                 <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
                                                                                         aria-hidden="true"></i></a> {% else %}
                                                 <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
@@ -239,7 +239,7 @@
                                             </td>
                                             <td>{% if corso.pid == utente.uid %}
                                                 <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
-                                                                                        aria-hidden="true"></i></a>  {% elif utente.tipo==2 %}
+                                                                                        aria-hidden="true"></i></a>  {% elif utente.tipo==3 %}
                                                 <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
                                                                                         aria-hidden="true"></i></a> {% else %}
                                                 <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
