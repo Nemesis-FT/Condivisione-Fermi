@@ -5,7 +5,7 @@
         <h1 class="display-3">{% if utente.tipo == 0 %}Ciao, {{ utente.nome }}!{% elif utente.tipo == 1 %} Ciao, peer
             {{ utente.nome }}! {% elif utente.tipo == 2 %}Salve, prof {{ utente.cognome }} {% elif utente.tipo == 3 %}
             Salve, Admin {{ utente.cognome }}.{% endif %}</h1>
-        <p class="lead"> {% if utente.tipo == 2 %} Le {% else %}Ti{% endif %} diamo il benvenuto nella
+        <p class="lead"> {% if utente.tipo > 1 %} Le {% else %}Ti{% endif %} diamo il benvenuto nella
             {% if utente.tipo >= 2 %} sua {% else %}tua{% endif %} dashboard!</p>
         <hr class="my-4">
         <p>{% if utente.tipo == 0 %}In questa pagina potrai esplorare i corsi sulla piattaforma, visualizzare i tuoi
@@ -142,7 +142,6 @@
                                 <thead>
                                 <tr>
                                     <th>Materia</th>
-                                    <th>Peer</th>
                                     <th>Argomenti</th>
                                     <th>Giorno</th>
                                     <th>Stato</th>
@@ -153,9 +152,6 @@
                                     {% if corso.tipo == 0 %}
                                         <tr>
                                             <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
-                                            <td><a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-search"
-                                                                                           aria-hidden="true"></i></a>
-                                            </td>
                                             <td>{{ corso.argomenti }}</td>
                                             <td>{% if corso.materia.giorno_settimana == 1 %}
                                                 Lunedì, {% elif corso.materia.giorno_settimana == 2 %}
@@ -183,6 +179,7 @@
                                                                                         aria-hidden="true"></i></a> {% else %}
                                                 <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
                                                                                          aria-hidden="true"></i></a> {% endif %}
+                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap" aria-hidden="true"></i></a>
                                             </td>
                                         </tr>
                                     {% endif %}
@@ -211,7 +208,6 @@
                                 <thead>
                                 <tr>
                                     <th>Materia</th>
-                                    <th>Professore</th>
                                     <th>Argomenti</th>
                                     <th>Data</th>
                                     <th>Stato</th>
@@ -222,9 +218,6 @@
                                     {% if corso.tipo == 1 %}
                                         <tr>
                                             <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
-                                            <td><a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-search"
-                                                                                           aria-hidden="true"></i></a>
-                                            </td>
                                             <td>{{ corso.argomenti }}</td>
                                             <td>{{ corso.appuntamento }}
                                             <td>
@@ -244,6 +237,7 @@
                                                                                         aria-hidden="true"></i></a> {% else %}
                                                 <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
                                                                                          aria-hidden="true"></i></a> {% endif %}
+                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap" aria-hidden="true"></i></a>
                                             </td>
                                         </tr>
                                     {% endif %}
@@ -268,11 +262,9 @@
                         <a href="/user_list" type="button" class="btn btn-warning btn-lg btn-block">Gestisci
                             utenti</a>
                         <a href="/message_add" type="button" class="btn btn-warning btn-lg btn-block">Crea
-                            messaggio di
-                            sistema</a>
+                            messaggio</a>
                         <a href="/server_log" type="button" class="btn btn-warning btn-lg btn-block">Esamina i
-                            log di
-                            sistema</a>
+                            log</a>
                     {% endif %}
                 {% endif %}
             {% endif %}
