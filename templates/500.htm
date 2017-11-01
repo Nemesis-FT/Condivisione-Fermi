@@ -7,7 +7,11 @@
         <hr class="my-4">
         <p>Segue una descrizione dell'errore</p>
         <div class="alert alert-danger" role="alert">
-            <strong>500</strong>: Errore del server con debugger disattivo. Siete pregati di segnalare questo errore a <a href="mailto:lorenzo.balugani@gmail.com">Lorenzo Balugani</a>.
+            {% if e %}
+                <strong>500</strong>: {{ e }}
+            {% else %}
+                <strong>500</strong>: Errore del server con debugger disattivo. Siete pregati di segnalare questo errore a <a href="mailto:lorenzo.balugani@gmail.com">Lorenzo Balugani</a>.
+            {% endif %}
         </div>
         <a href="/dashboard">Torna alla schermata principale</a>
     </div>

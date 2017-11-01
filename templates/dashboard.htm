@@ -11,7 +11,7 @@
         <p>{% if utente.tipo == 0 %}In questa pagina potrai esplorare i corsi sulla piattaforma, visualizzare i tuoi
             impegni e modificare il tuo profilo.{% elif utente.tipo == 1 %}In questa pagina potrai esplorare e creare
             corsi, visualizzare i tuoi impegni e modificare il tuo profilo.{% elif utente.tipo == 2 %}Da questa pagina
-            le sarà possibile abilitare gli utenti all'insegnamento, creare corsi e materie. {% elif utente.tipo == 3 %}
+            le sarà possibile creare corsi e materie. {% elif utente.tipo == 3 %}
             Da questa pagina le sarà possibile creare materie, gestire gli utenti e visualizzare i log di
             sistema.{% endif %}</p>
     </div>
@@ -75,8 +75,8 @@
                                     {% for impegno in impegni %}
                                         <tr>
                                             <td>{{ impegno[4] }}</td>
-                                            {% if impegno[7] %}
-                                                <td>{{ impegno[7] }}</td>
+                                            {% if impegno[8] %}
+                                                <td>{{ impegno[8] }}</td>
                                             {% else %}
                                                 <td>{% if impegno[5] == 1 %}Lunedì, {% elif impegno[5] == 2 %}
                                                     Martedì, {% elif impegno[5] == 3 %}
@@ -88,8 +88,10 @@
                                                                                             aria-hidden="true"></i></a>
                                                 <a href="/user_inspect/{{ impegno[2] }}"><i class="fa fa-users"
                                                                                              aria-hidden="true"></i></a>
+                                                {% if utente.tipo > 1 %}
                                                 <a href="/corso_membri/{{ impegno[1] }}"><i class="fa fa-search"
                                                                                              aria-hidden="true"></i></a>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}

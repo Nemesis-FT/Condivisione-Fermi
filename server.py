@@ -2,6 +2,7 @@ from flask import Flask, session, url_for, redirect, request, render_template, a
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import text
 import bcrypt
+import smtplib
 from datetime import datetime, date, timedelta
 import os
 
@@ -9,9 +10,12 @@ app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey = dati.split("|", 1)
+appkey, telegramkey, from_addr, accesso, password = dati.split("|", 4)
 print(appkey)
 print(telegramkey)
+print(from_addr)
+print(accesso)
+print(password)
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -19,12 +23,13 @@ db = SQLAlchemy(app)
 
 
 # Classi
-
+# TODO: aggiungere bot, verificare validità dati in dashboard, sistemare problema con la tabella impegni,
 
 class User(db.Model):
     __tablename__ = 'user'
     uid = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True, nullable=False)
+    emailgenitore = db.Column(db.String, nullable=False)
     passwd = db.Column(db.LargeBinary, nullable=False)
     nome = db.Column(db.String, nullable=False)
     cognome = db.Column(db.String, nullable=False)
@@ -32,11 +37,12 @@ class User(db.Model):
     tipo = db.Column(db.Integer, nullable=False)
     # 0 = utente normale, 1 = peer, 2 = professore, 3 = amministratore
     telegram_username = db.Column(db.String)
+    telegram_chat_id = db.Column(db.String, unique=True)
     corsi = db.relationship("Corso", backref="peer")
     materie = db.relationship("Abilitato", backref='utente', lazy='dynamic', cascade='delete')
     impegno = db.relationship("Impegno")
 
-    def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username):
+    def __init__(self, username, passwd, nome, cognome, classe, tipo, telegram_username, emailgenitore):
         self.username = username
         self.passwd = passwd
         self.nome = nome
@@ -44,6 +50,7 @@ class User(db.Model):
         self.classe = classe
         self.tipo = tipo
         self.telegram_username = telegram_username
+        self.emailgenitore = emailgenitore
 
     def __repr__(self):
         return "<User {}>".format(self.username, self.passwd, self.nome, self.cognome, self.classe)
@@ -60,7 +67,7 @@ class Corso(db.Model):
     materia_id = db.Column(db.Integer, db.ForeignKey('materia.mid'), nullable=False)
     impegno = db.relationship("Impegno")
     materia = db.relationship("Materia")
-    tipo = db.Column(db.Integer,nullable=False)  # 0 = ripetizione studente, 1 = recupero professore
+    tipo = db.Column(db.Integer, nullable=False)  # 0 = ripetizione studente, 1 = recupero professore
     appuntamento = db.Column(db.DateTime)
     limite = db.Column(db.Integer)
     occupati = db.Column(db.Integer)
@@ -104,6 +111,7 @@ class Impegno(db.Model):
     stud_id = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
     studente = db.relationship("User")
     appuntamento = db.Column(db.DateTime)  # ridondante? decisamente
+    presente = db.Column(db.Boolean, nullable=False)
 
 
 class Messaggio(db.Model):
@@ -144,6 +152,7 @@ class Log(db.Model):
         self.contenuto = contenuto
         self.ora = ora
 
+
 # Funzioni
 
 
@@ -159,6 +168,21 @@ def login(username, password):
 def find_user(username):
     return User.query.filter_by(username=username).first()
 
+
+def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
+    e = "Errore di invio mail. Il server potrebbe non essere raggiungibile o l'email immessa errata."
+    try:
+        header = 'From: %s' % from_addr
+        header += 'To: %s' % ','.join(to_addr_list)
+        header += 'Subject: %s' % subject
+        message = header + message
+        server = smtplib.SMTP(smtpserver)
+        server.starttls()
+        server.login(accesso, password)
+        problems = server.sendmail(from_addr, to_addr_list, message)
+        server.quit()
+    except:
+        return redirect(url_for(page_500, e))
 
 
 # Gestori Errori
@@ -221,7 +245,7 @@ def page_register():
         if len(utenti) == 0:
             valore = 3
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                         request.form['classe'], valore, request.form['usernameTelegram'])
+                         request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
         stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
@@ -238,38 +262,40 @@ def page_dashboard():
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
-        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+        query1 = text(
+            "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
         impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+        query2 = text(
+            "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
-        for lezione in lezioni:
-            print(lezione)
+        # for lezione in lezioni:
+        #    print(lezione)
         # oggi = datetime.today().weekday()
         # oggi = oggi + 1
         # for impegno in impegni:
-        #     if not impegno[7]:
-        #         if impegno[6] == oggi:
-        #             db.session.delete(impegno)
-        #     else:
-        #         print(impegno[7])
-        #         purifica, spazzatura = impegno[7].split(" ", 1)
-        #         yyyy, mm, dd, = purifica.split("-", 2)
-        #         data = datetime(int(yyyy), int(mm), int(dd))
-        #         if data > datetime.today()+timedelta(days=1):
-        #             db.session.delete(impegno)
+        #    if not impegno[8]:
+        #        if impegno[6] == oggi:
+        #            db.session.delete(impegno)
+        #    elif impegno:
+        #        print(impegno[8])
+        #        purifica, spazzatura = impegno[8].split(" ", 1)
+        #        yyyy, mm, dd, = purifica.split("-", 2)
+        #        data = datetime(int(yyyy), int(mm), int(dd))
+        #        if data <= datetime.today() + timedelta(days=1):
+        #            db.session.delete(impegno)
         # for lezione in lezioni:
-        #     if not lezione[7]:
-        #         if lezione[6] == oggi:
-        #             db.session.delete(lezione)
-        #     else:
-        #         print(lezione)
-        #         print(lezione[7])
-        #         purifica, spazzatura = lezione[7].split(" ", 1)
-        #         yyyy, mm, dd, = purifica.split("-", 2)
-        #         data = datetime(int(yyyy), int(mm), int(dd))
-        #         if data > datetime.today()+timedelta(days=1):
-        #             db.session.delete(lezione)
-        # db.session.commit()
+        #    if not lezione[8]:
+        #        if lezione[6] == oggi:
+        #            db.session.delete(lezione)
+        #    elif lezione:
+        #        print(lezione)
+        #        print(lezione[8])
+        #        purifica, spazzatura = lezione[8].split(" ", 1)
+        #        yyyy, mm, dd, = purifica.split("-", 2)
+        #        data = datetime(int(yyyy), int(mm), int(dd))
+        #        if data <= datetime.today() + timedelta(days=1):
+        #            db.session.delete(lezione)
+        db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
                                lezioni=lezioni)
 
@@ -435,7 +461,7 @@ def page_user_del(uid):
         if utente.tipo != 3:
             abort(403)
         else:
-            stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente "+ str(uid)
+            stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
@@ -491,6 +517,7 @@ def page_user_edit(uid):
                 entita.passwd = cenere
                 entita.classe = request.form["classe"]
                 entita.telegram_username = request.form["usernameTelegram"]
+                entita.emailgenitore = request.form['mailGenitori']
                 db.session.commit()
                 return redirect(url_for('page_dashboard'))
 
@@ -510,7 +537,8 @@ def page_materia_add():
                 stringa = "L'utente " + utente.username + " ha creato una materia "
                 nuovorecord = Log(stringa, datetime.today())
                 db.session.add(nuovorecord)
-                nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"], request.form['ora'])
+                nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"],
+                                       request.form['ora'])
                 db.session.add(nuovamateria)
                 db.session.commit()
                 return redirect(url_for('page_materia_list'))
@@ -662,15 +690,18 @@ def page_corso_join(cid):
         corso = Corso.query.get_or_404(cid)
         if corso.occupati >= corso.limite:
             return redirect(url_for('page_dashboard'))
-        corso.occupati = corso.occupati+1
+        corso.occupati = corso.occupati + 1
         stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
         nuovoimpegno = Impegno(studente=utente,
-                               corso_id=cid)
+                               corso_id=cid, presente=False)
         if corso.tipo != 0:
             print(corso.materia.nome)
             nuovoimpegno.appuntamento = corso.appuntamento
+        oggetto = "Condivisione - Iscrizione alla lezione"
+        mail = "\n\nSuo figlio si e' iscritto ad una lezione sulla piattaforma Condivisione. Per maggiori informazioni, collegarsi al sito.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+        sendemail(utente.emailgenitore, oggetto, mail)
         db.session.add(nuovoimpegno)
         db.session.commit()
         return redirect(url_for('page_dashboard'))
@@ -695,17 +726,76 @@ def corso_membri(cid):
         abort(403)
     else:
         utente = find_user(session['username'])
-        query = text("SELECT corso.*, impegno.stud_id FROM corso JOIN impegno ON corso.cid = impegno.corso_id WHERE corso.cid=:x;")
+        if utente.tipo < 1:
+            abort(403)
+        query = text(
+            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
         utenti = db.session.execute(query, {"x": cid}).fetchall()
-        return render_template("Corso/membri.htm", utente=utente, entita=utenti)
+        return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
+
+
+@app.route('/presenza/<int:uid>/<int:cid>')
+def page_presenza(uid, cid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo <= 1:
+            abort(403)
+        else:
+            impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
+            if impegno.presente:
+                impegno.presente = False
+            else:
+                impegno.presente = True
+            db.session.commit()
+            return redirect(url_for('corso_membri', cid=cid))
+
+
+@app.route('/inizialezione/<int:cid>')
+def page_inizia(cid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        corso = Corso.query.get_or_404(cid)
+        if utente.tipo < 1:
+            abort(403)
+        query = text(
+            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+        utenti = db.session.execute(query, {"x": cid}).fetchall()
+        for utente2 in utenti:
+            if str(utente2[9]) == 1:
+                oggetto = "Condivisione - Partecipazione alla lezione"
+                mail = "\n\nSuo figlio e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+                sendemail(utente2[12], oggetto, mail)
+            else:
+                oggetto = "Condivisione - Assenza alla lezione"
+                mail = "\n\nSuo figlio non e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+                sendemail(utente2[12], oggetto, mail)
+        stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        corso = Corso.query.get_or_404(cid)
+        impegni = Impegno.query.all()
+        for impegno in impegni:
+            if impegno.corso_id == cid:
+                db.session.delete(impegno)
+                stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
+        db.session.delete(corso)
+        db.session.commit()
+        return redirect(url_for('page_dashboard'))
 
 
 if __name__ == "__main__":
-    # Se non esiste il database, crealo e inizializzalo!
+    # Se non esiste il database viene creato
     if not os.path.isfile("db.sqlite"):
         db.create_all()
         db.session.commit()
-    nuovrecord = Log("Database di Condivisione creato. Condivisione è un programma di FermiTech Softworks.", datetime.today())
+    nuovrecord = Log("Database di Condivisione creato. Condivisione è un programma di FermiTech Softworks.",
+                     datetime.today())
     db.session.add(nuovrecord)
     db.session.commit()
     app.run()
