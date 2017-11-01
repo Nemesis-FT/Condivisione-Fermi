@@ -10,7 +10,7 @@ app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password = dati.split("|", 4)
+appkey, telegramkey, from_addr, accesso, password = dati.split("|", 4) # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail
 print(appkey)
 print(telegramkey)
 print(from_addr)
@@ -23,7 +23,7 @@ db = SQLAlchemy(app)
 
 
 # Classi
-# TODO: aggiungere bot, verificare validità dati in dashboard, sistemare problema con la tabella impegni,
+# TODO: aggiungere bot
 
 class User(db.Model):
     __tablename__ = 'user'

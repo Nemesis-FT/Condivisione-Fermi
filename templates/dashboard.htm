@@ -74,19 +74,19 @@
                                 {% if impegni %}
                                     {% for impegno in impegni %}
                                         <tr>
-                                            <td>{{ impegno[4] }}</td>
-                                            {% if impegno[8] %}
-                                                <td>{{ impegno[8] }}</td>
+                                            <td>{{ impegno[6] }}</td>
+                                            {% if impegno[9] %}
+                                                <td>{{ impegno[9] }}</td>
                                             {% else %}
-                                                <td>{% if impegno[5] == 1 %}Lunedì, {% elif impegno[5] == 2 %}
-                                                    Martedì, {% elif impegno[5] == 3 %}
-                                                    Mercoledì, {% elif impegno[5] == 4 %}
-                                                    Giovedì, {% elif impegno[5] == 5 %}
-                                                    Venerdì, {% endif %}{{ impegno[6] }}</td>
+                                                <td>{% if impegno[7] == 1 %}Lunedì, {% elif impegno[7] == 2 %}
+                                                    Martedì, {% elif impegno[7] == 3 %}
+                                                    Mercoledì, {% elif impegno[7] == 4 %}
+                                                    Giovedì, {% elif impegno[7] == 5 %}
+                                                    Venerdì, {% endif %}{{ impegno[8] }}</td>
                                             {% endif %}
-                                            <td><a href="/user_inspect/{{ impegno[10] }}"><i class="fa fa-graduation-cap"
+                                            <td><a href="/user_inspect/{{ impegno[12] }}"><i class="fa fa-graduation-cap"
                                                                                             aria-hidden="true"></i></a>
-                                                <a href="/user_inspect/{{ impegno[2] }}"><i class="fa fa-users"
+                                                <a href="/user_inspect/{{ impegno[5] }}"><i class="fa fa-users"
                                                                                              aria-hidden="true"></i></a>
                                                 {% if utente.tipo > 1 %}
                                                 <a href="/corso_membri/{{ impegno[1] }}"><i class="fa fa-search"
@@ -99,20 +99,20 @@
                                 {% if lezioni %}
                                     {% for lezione in lezioni %}
                                         <tr>
-                                            <td>{{ lezione[4] }}</td>
+                                            <td>{{ lezione[6] }}</td>
                                             <td></td>
-                                            {% if lezione[7] %}
-                                                <td>{{ lezione[7] }}</td>
+                                            {% if lezione[9] %}
+                                                <td>{{ lezione[9] }}</td>
                                             {% else %}
-                                                <td>{% if lezione[5] == 1 %}Lunedì, {% elif lezione[5] == 2 %}
-                                                    Martedì, {% elif lezione[5] == 3 %}
-                                                    Mercoledì, {% elif lezione[5] == 4 %}
-                                                    Giovedì, {% elif lezione[5] == 5 %}
-                                                    Venerdì, {% endif %}{{ lezione[6] }}</td>
+                                                <td>{% if lezione[7] == 1 %}Lunedì, {% elif lezione[7] == 2 %}
+                                                    Martedì, {% elif lezione[7] == 3 %}
+                                                    Mercoledì, {% elif lezione[7] == 4 %}
+                                                    Giovedì, {% elif lezione[7] == 5 %}
+                                                    Venerdì, {% endif %}{{ lezione[8] }}</td>
                                             {% endif %}
-                                            <td><a href="/user_inspect/{{ lezione[10] }}"><i class="fa fa-graduation-cap"
+                                            <td><a href="/user_inspect/{{ lezione[12] }}"><i class="fa fa-graduation-cap"
                                                                                             aria-hidden="true"></i></a>
-                                                <a href="/user_inspect/{{ lezione[2] }}"><i class="fa fa-users"
+                                                <a href="/user_inspect/{{ lezione[5] }}"><i class="fa fa-users"
                                                                                              aria-hidden="true"></i></a>
                                                 <a href="/corso_membri/{{ lezione[1] }}"><i class="fa fa-search"
                                                                                              aria-hidden="true"></i>
@@ -273,5 +273,5 @@
         </div>
     </div>
     <br>
-    <center>Versione di Condivisione 1.18</center>
+    <center>Versione di Condivisione 1.20</center>
 {% endblock %}
