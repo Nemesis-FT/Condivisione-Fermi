@@ -268,33 +268,6 @@ def page_dashboard():
         query2 = text(
             "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
-        # for lezione in lezioni:
-        #    print(lezione)
-        # oggi = datetime.today().weekday()
-        # oggi = oggi + 1
-        # for impegno in impegni:
-        #    if not impegno[8]:
-        #        if impegno[6] == oggi:
-        #            db.session.delete(impegno)
-        #    elif impegno:
-        #        print(impegno[8])
-        #        purifica, spazzatura = impegno[8].split(" ", 1)
-        #        yyyy, mm, dd, = purifica.split("-", 2)
-        #        data = datetime(int(yyyy), int(mm), int(dd))
-        #        if data <= datetime.today() + timedelta(days=1):
-        #            db.session.delete(impegno)
-        # for lezione in lezioni:
-        #    if not lezione[8]:
-        #        if lezione[6] == oggi:
-        #            db.session.delete(lezione)
-        #    elif lezione:
-        #        print(lezione)
-        #        print(lezione[8])
-        #        purifica, spazzatura = lezione[8].split(" ", 1)
-        #        yyyy, mm, dd, = purifica.split("-", 2)
-        #        data = datetime(int(yyyy), int(mm), int(dd))
-        #        if data <= datetime.today() + timedelta(days=1):
-        #            db.session.delete(lezione)
         db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
                                lezioni=lezioni)
@@ -787,6 +760,26 @@ def page_inizia(cid):
         db.session.delete(corso)
         db.session.commit()
         return redirect(url_for('page_dashboard'))
+
+
+@app.route('/ricerca', methods=["GET", "POST"]) # Funzione scritta da Stefano Pigozzi nel progetto Estus
+def page_ricerca():
+    if 'username' not in session:
+        return abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 2:
+            abort(403)
+        else:
+            if request.method == 'GET':
+                return render_template("query.htm", pagetype="query")
+            else:
+                try:
+                    result = db.engine.execute("SELECT " + request.form["query"] + ";")
+                except Exception as e:
+                    return render_template("query.htm", query=request.form["query"], error=repr(e), pagetype="query")
+                return render_template("query.htm", query=request.form["query"], result=result,
+                                       pagetype="query")
 
 
 if __name__ == "__main__":
