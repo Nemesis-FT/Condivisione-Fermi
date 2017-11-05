@@ -75,14 +75,14 @@
                                     {% for impegno in impegni %}
                                         <tr>
                                             <td>{{ impegno[6] }}</td>
-                                            {% if impegno[9] %}
-                                                <td>{{ impegno[9] }}</td>
+                                            {% if impegno[8] %}
+                                                <td>{{ impegno[8] }}</td>
                                             {% else %}
-                                                <td>{% if impegno[7] == 1 %}Lunedì, {% elif impegno[7] == 2 %}
-                                                    Martedì, {% elif impegno[7] == 3 %}
-                                                    Mercoledì, {% elif impegno[7] == 4 %}
-                                                    Giovedì, {% elif impegno[7] == 5 %}
-                                                    Venerdì, {% endif %}{{ impegno[8] }}</td>
+                                                <td>{% if impegno[6] == "1" %}Lunedì, {% elif impegno[6] == "2" %}
+                                                    Martedì, {% elif impegno[6] == "3" %}
+                                                    Mercoledì, {% elif impegno[6] == "4" %}
+                                                    Giovedì, {% elif impegno[6] == "5" %}
+                                                    Venerdì, {% endif %}{{ impegno[7] }}</td>
                                             {% endif %}
                                             <td><a href="/user_inspect/{{ impegno[12] }}"><i class="fa fa-graduation-cap"
                                                                                             aria-hidden="true"></i></a>
@@ -100,15 +100,14 @@
                                     {% for lezione in lezioni %}
                                         <tr>
                                             <td>{{ lezione[6] }}</td>
-                                            <td></td>
-                                            {% if lezione[9] %}
-                                                <td>{{ lezione[9] }}</td>
+                                            {% if lezione[8] %}
+                                                <td>{{ lezione[8]}}</td>
                                             {% else %}
-                                                <td>{% if lezione[7] == 1 %}Lunedì, {% elif lezione[7] == 2 %}
-                                                    Martedì, {% elif lezione[7] == 3 %}
-                                                    Mercoledì, {% elif lezione[7] == 4 %}
-                                                    Giovedì, {% elif lezione[7] == 5 %}
-                                                    Venerdì, {% endif %}{{ lezione[8] }}</td>
+                                                <td>{% if lezione[6] == "1" %}Lunedì, {% elif lezione[6] == "2" %}
+                                                    Martedì, {% elif lezione[6] == "3" %}
+                                                    Mercoledì, {% elif lezione[6] == "4" %}
+                                                    Giovedì, {% elif lezione[6] == "5" %}
+                                                    Venerdì, {% endif %}{{ lezione[7] }}</td>
                                             {% endif %}
                                             <td><a href="/user_inspect/{{ lezione[12] }}"><i class="fa fa-graduation-cap"
                                                                                             aria-hidden="true"></i></a>

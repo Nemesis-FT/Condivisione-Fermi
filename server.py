@@ -5,12 +5,15 @@ import bcrypt
 import smtplib
 from datetime import datetime, date, timedelta
 import os
+import telepot
+from telepot.loop import MessageLoop
 
 app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password = dati.split("|", 4) # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail
+appkey, telegramkey, from_addr, accesso, password = dati.split("|",
+                                                               4)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail
 print(appkey)
 print(telegramkey)
 print(from_addr)
@@ -153,6 +156,12 @@ class Log(db.Model):
         self.ora = ora
 
 
+class SessioneBot:
+    def __init__(self, utente, nomemenu, autenticato=0):
+        self.utente = utente
+        self.nomemenu = nomemenu
+
+
 # Funzioni
 
 
@@ -183,6 +192,20 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         server.quit()
     except:
         return redirect(url_for(page_500, e))
+
+
+def rendi_data_leggibile(poccio):
+    data, ora = str(poccio).split(" ", 1)
+    anno, mese, giorno = data.split("-", 2)
+    ora, minuto, spazzatura = ora.split(":", 2)
+    risultato = mese+"/"+giorno+" "+ora+":"+minuto
+    return risultato
+
+
+def broadcast(msg, utenti=[]):
+    for utente in utenti:
+        if utente.telegram_chat_id:
+            bot.sendMessage(utente.telegram_chat_id, msg)
 
 
 # Gestori Errori
@@ -622,6 +645,10 @@ def page_corso_add():
                     nuovocorso.limite = request.form["massimo"]
                     db.session.add(nuovocorso)
                     db.session.commit()
+                    utenze = User.query.all()
+                    oggetto = Materia.query.filter_by(mid=request.form['materia'])
+                    msg="E' stato creato un nuovo corso di "+oggetto[0].nome+"!.\nPer maggiori informazioni, collegati a Condivisione!"
+                    broadcast(msg, utenze)
                     return redirect(url_for('page_dashboard'))
 
 
@@ -713,7 +740,8 @@ def page_presenza(uid, cid):
         abort(403)
     else:
         utente = find_user(session['username'])
-        if utente.tipo <= 1:
+        lezione = Corso.query.get(cid)
+        if utente.tipo <= 1 or utente.uid != lezione.pid:
             abort(403)
         else:
             impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
@@ -731,8 +759,8 @@ def page_inizia(cid):
         abort(403)
     else:
         utente = find_user(session['username'])
-        corso = Corso.query.get_or_404(cid)
-        if utente.tipo < 1:
+        lezione = Corso.query.get_or_404(cid)
+        if utente.tipo < 1 or utente.uid != lezione.pid:
             abort(403)
         query = text(
             "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
@@ -762,7 +790,7 @@ def page_inizia(cid):
         return redirect(url_for('page_dashboard'))
 
 
-@app.route('/ricerca', methods=["GET", "POST"]) # Funzione scritta da Stefano Pigozzi nel progetto Estus
+@app.route('/ricerca', methods=["GET", "POST"])  # Funzione scritta da Stefano Pigozzi nel progetto Estus
 def page_ricerca():
     if 'username' not in session:
         return abort(403)
@@ -782,13 +810,99 @@ def page_ricerca():
                                        pagetype="query")
 
 
+# Bot
+
+
+def handle(msg):
+    content_type, chat_type, chat_id = telepot.glance(msg)
+    username = "@"
+    username += msg['from']['username']
+    if content_type == 'text':
+        utenza = User.query.filter_by(telegram_chat_id=chat_id).all()
+        if not utenza:
+            accedi(chat_id, username)
+        else:
+            utente=utenza[0]
+            testo = msg['text']
+            if testo == "/aiuto":
+                bot.sendMessage(chat_id,
+                                "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
+            elif testo == "/impegni":
+
+                query1 = text(
+                    "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+                impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
+                query2 = text(
+                    "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+                lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
+                messaggio = ""
+                if len(impegni) > 0:
+                    messaggio += "Ecco i tuoi impegni:\n"
+                    for impegno in impegni:
+                        messaggio += "Materia: " + impegno[5] + " "
+                        if impegno[8]:
+                            messaggio += rendi_data_leggibile(impegno[8])
+                        else:
+                            if str(impegno[6]) == "1":
+                                giorno = "Lunedì"
+                            elif str(impegno[6]) == "2":
+                                giorno = "Martedì"
+                            elif str(impegno[6]) == "3":
+                                giorno = "Mercoledì"
+                            elif str(impegno[6]) == "4":
+                                giorno = "Giovedì"
+                            elif str(impegno[6]) == "5":
+                                giorno = "Venerdì"
+                            ora = str(impegno[7])
+                            messaggio += giorno + " " + ora + "\n"
+                if len(lezioni) > 0:
+                    messaggio += "Ecco le ripetizioni che devi ricevere:\n"
+                    for impegno in lezioni:
+                        messaggio += "Materia: " + impegno[5] + " "
+                        if impegno[8]:
+                            messaggio += rendi_data_leggibile(impegno[8])
+                        else:
+                            if str(impegno[6]) == "1":
+                                giorno = "Lunedì"
+                            elif str(impegno[6]) == "2":
+                                giorno = "Martedì"
+                            elif str(impegno[6]) == "3":
+                                giorno = "Mercoledì"
+                            elif str(impegno[6]) == "4":
+                                giorno = "Giovedì"
+                            elif str(impegno[6]) == "5":
+                                giorno = "Venerdì"
+                            ora = str(impegno[7])
+                            messaggio += giorno + " " + ora + "\n"
+                if len(lezioni) == 0 and len(impegni) == 0:
+                    messaggio += "Sembra che tu non abbia impegni. Beato te!"
+                bot.sendMessage(chat_id, messaggio)
+
+
+def accedi(chat_id, username):
+    utenti = User.query.filter_by(telegram_username=username).all()
+    print(username)
+    if not utenti:
+        bot.sendMessage(chat_id,
+                        "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
+    else:
+        bot.sendMessage(chat_id,
+                        "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
+        utenti[0].telegram_chat_id = chat_id
+        db.session.commit()
+
+
 if __name__ == "__main__":
     # Se non esiste il database viene creato
     if not os.path.isfile("db.sqlite"):
         db.create_all()
         db.session.commit()
-    nuovrecord = Log("Database di Condivisione creato. Condivisione è un programma di FermiTech Softworks.",
+    nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.",
                      datetime.today())
+    bot = telepot.Bot(telegramkey)
+    bot.getMe()
+    MessageLoop(bot, handle).run_as_thread()
+    print("Bot di Telegram avviato!")
     db.session.add(nuovrecord)
     db.session.commit()
     app.run()
