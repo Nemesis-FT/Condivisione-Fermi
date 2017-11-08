@@ -830,82 +830,84 @@ def page_bot():
 
 
 def handle(msg):
-    content_type, chat_type, chat_id = telepot.glance(msg)
-    username = "@"
-    username += msg['from']['username']
-    if content_type == 'text':
-        utenza = User.query.filter_by(telegram_chat_id=chat_id).all()
-        if not utenza:
-            accedi(chat_id, username)
-        else:
-            utente = utenza[0]
-            testo = msg['text']
-            if testo == "/aiuto":
-                bot.sendMessage(chat_id,
-                                "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
-            elif testo == "/impegni":
+    with app.app_context():
+        content_type, chat_type, chat_id = telepot.glance(msg)
+        username = "@"
+        username += msg['from']['username']
+        if content_type == 'text':
+            utenza = User.query.filter_by(telegram_chat_id=chat_id).all()
+            if not utenza:
+                accedi(chat_id, username)
+            else:
+                utente = utenza[0]
+                testo = msg['text']
+                if testo == "/aiuto":
+                    bot.sendMessage(chat_id,
+                                    "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
+                elif testo == "/impegni":
 
-                query1 = text(
-                    "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
-                impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-                query2 = text(
-                    "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
-                lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
-                messaggio = ""
-                if len(impegni) > 0:
-                    messaggio += "Ecco i tuoi impegni:\n"
-                    for impegno in impegni:
-                        messaggio += "Materia: " + impegno[5] + " "
-                        if impegno[8]:
-                            messaggio += rendi_data_leggibile(impegno[8])
-                        else:
-                            if str(impegno[6]) == "1":
-                                giorno = "Lunedì"
-                            elif str(impegno[6]) == "2":
-                                giorno = "Martedì"
-                            elif str(impegno[6]) == "3":
-                                giorno = "Mercoledì"
-                            elif str(impegno[6]) == "4":
-                                giorno = "Giovedì"
-                            elif str(impegno[6]) == "5":
-                                giorno = "Venerdì"
-                            ora = str(impegno[7])
-                            messaggio += giorno + " " + ora + "\n"
-                if len(lezioni) > 0:
-                    messaggio += "Ecco le ripetizioni che devi ricevere:\n"
-                    for impegno in lezioni:
-                        messaggio += "Materia: " + impegno[5] + " "
-                        if impegno[8]:
-                            messaggio += rendi_data_leggibile(impegno[8])
-                        else:
-                            if str(impegno[6]) == "1":
-                                giorno = "Lunedì"
-                            elif str(impegno[6]) == "2":
-                                giorno = "Martedì"
-                            elif str(impegno[6]) == "3":
-                                giorno = "Mercoledì"
-                            elif str(impegno[6]) == "4":
-                                giorno = "Giovedì"
-                            elif str(impegno[6]) == "5":
-                                giorno = "Venerdì"
-                            ora = str(impegno[7])
-                            messaggio += giorno + " " + ora + "\n"
-                if len(lezioni) == 0 and len(impegni) == 0:
-                    messaggio += "Sembra che tu non abbia impegni. Beato te!"
-                bot.sendMessage(chat_id, messaggio)
+                    query1 = text(
+                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+                    impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
+                    query2 = text(
+                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+                    lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
+                    messaggio = ""
+                    if len(impegni) > 0:
+                        messaggio += "Ecco i tuoi impegni:\n"
+                        for impegno in impegni:
+                            messaggio += "Materia: " + impegno[5] + " "
+                            if impegno[8]:
+                                messaggio += rendi_data_leggibile(impegno[8])
+                            else:
+                                if str(impegno[6]) == "1":
+                                    giorno = "Lunedì"
+                                elif str(impegno[6]) == "2":
+                                    giorno = "Martedì"
+                                elif str(impegno[6]) == "3":
+                                    giorno = "Mercoledì"
+                                elif str(impegno[6]) == "4":
+                                    giorno = "Giovedì"
+                                elif str(impegno[6]) == "5":
+                                    giorno = "Venerdì"
+                                ora = str(impegno[7])
+                                messaggio += giorno + " " + ora + "\n"
+                    if len(lezioni) > 0:
+                        messaggio += "Ecco le ripetizioni che devi ricevere:\n"
+                        for impegno in lezioni:
+                            messaggio += "Materia: " + impegno[5] + " "
+                            if impegno[8]:
+                                messaggio += rendi_data_leggibile(impegno[8])
+                            else:
+                                if str(impegno[6]) == "1":
+                                    giorno = "Lunedì"
+                                elif str(impegno[6]) == "2":
+                                    giorno = "Martedì"
+                                elif str(impegno[6]) == "3":
+                                    giorno = "Mercoledì"
+                                elif str(impegno[6]) == "4":
+                                    giorno = "Giovedì"
+                                elif str(impegno[6]) == "5":
+                                    giorno = "Venerdì"
+                                ora = str(impegno[7])
+                                messaggio += giorno + " " + ora + "\n"
+                    if len(lezioni) == 0 and len(impegni) == 0:
+                        messaggio += "Sembra che tu non abbia impegni. Beato te!"
+                    bot.sendMessage(chat_id, messaggio)
 
 
 def accedi(chat_id, username):
-    utenti = User.query.filter_by(telegram_username=username).all()
-    print(username)
-    if not utenti:
-        bot.sendMessage(chat_id,
-                        "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
-    else:
-        bot.sendMessage(chat_id,
-                        "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
-        utenti[0].telegram_chat_id = chat_id
-        db.session.commit()
+    with app.app_context():
+        utenti = User.query.filter_by(telegram_username=username).all()
+        print(username)
+        if not utenti:
+            bot.sendMessage(chat_id,
+                            "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
+        else:
+            bot.sendMessage(chat_id,
+                            "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
+            utenti[0].telegram_chat_id = chat_id
+            db.session.commit()
 
 
 if __name__ == "__main__":
