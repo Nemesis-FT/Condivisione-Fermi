@@ -198,7 +198,7 @@ def rendi_data_leggibile(poccio):
     data, ora = str(poccio).split(" ", 1)
     anno, mese, giorno = data.split("-", 2)
     ora, minuto, spazzatura = ora.split(":", 2)
-    risultato = mese+"/"+giorno+" "+ora+":"+minuto
+    risultato = mese + "/" + giorno + " " + ora + ":" + minuto
     return risultato
 
 
@@ -647,7 +647,8 @@ def page_corso_add():
                     db.session.commit()
                     utenze = User.query.all()
                     oggetto = Materia.query.filter_by(mid=request.form['materia'])
-                    msg="E' stato creato un nuovo corso di "+oggetto[0].nome+"!.\nPer maggiori informazioni, collegati a Condivisione!"
+                    msg = "E' stato creato un nuovo corso di " + oggetto[
+                        0].nome + "!.\nPer maggiori informazioni, collegati a Condivisione!"
                     broadcast(msg, utenze)
                     return redirect(url_for('page_dashboard'))
 
@@ -822,7 +823,7 @@ def handle(msg):
         if not utenza:
             accedi(chat_id, username)
         else:
-            utente=utenza[0]
+            utente = utenza[0]
             testo = msg['text']
             if testo == "/aiuto":
                 bot.sendMessage(chat_id,
@@ -891,6 +892,10 @@ def accedi(chat_id, username):
         utenti[0].telegram_chat_id = chat_id
         db.session.commit()
 
+
+bot = telepot.Bot(telegramkey)
+bot.getMe()
+MessageLoop(bot, handle).run_as_thread()
 
 if __name__ == "__main__":
     # Se non esiste il database viene creato
