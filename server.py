@@ -811,6 +811,21 @@ def page_ricerca():
                                        pagetype="query")
 
 
+@app.route('/botStart')
+def page_bot():
+    if 'username' not in session:
+        return abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 2:
+            abort(403)
+        else:
+            global bot
+            bot = telepot.Bot(telegramkey)
+            bot.getMe()
+            MessageLoop(bot, handle).run_as_thread()
+
+
 # Bot
 
 
@@ -893,10 +908,6 @@ def accedi(chat_id, username):
         db.session.commit()
 
 
-bot = telepot.Bot(telegramkey)
-bot.getMe()
-MessageLoop(bot, handle).run_as_thread()
-
 if __name__ == "__main__":
     # Se non esiste il database viene creato
     if not os.path.isfile("db.sqlite"):
@@ -904,9 +915,6 @@ if __name__ == "__main__":
         db.session.commit()
     nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.",
                      datetime.today())
-    bot = telepot.Bot(telegramkey)
-    bot.getMe()
-    MessageLoop(bot, handle).run_as_thread()
     print("Bot di Telegram avviato!")
     db.session.add(nuovrecord)
     db.session.commit()
