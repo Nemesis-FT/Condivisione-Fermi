@@ -282,6 +282,7 @@ def page_dashboard():
     if 'username' not in session or 'username' is None:
         abort(403)
     else:
+        logged=len(session)
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
@@ -293,7 +294,7 @@ def page_dashboard():
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
         db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
-                               lezioni=lezioni)
+                               lezioni=lezioni, logged=logged)
 
 
 @app.route('/informazioni')
@@ -742,7 +743,7 @@ def page_presenza(uid, cid):
     else:
         utente = find_user(session['username'])
         lezione = Corso.query.get(cid)
-        if utente.tipo <= 1 or utente.uid != lezione.pid:
+        if utente.tipo < 1 or utente.uid != lezione.pid:
             abort(403)
         else:
             impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()

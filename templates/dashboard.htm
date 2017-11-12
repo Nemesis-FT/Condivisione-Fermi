@@ -74,7 +74,7 @@
                                 {% if impegni %}
                                     {% for impegno in impegni %}
                                         <tr>
-                                            <td>{{ impegno[6] }}</td>
+                                            <td>{{ impegno[5] }}</td>
                                             {% if impegno[8] %}
                                                 <td>{{ impegno[8] }}</td>
                                             {% else %}
@@ -84,13 +84,14 @@
                                                     Giovedì, {% elif impegno[6] == "5" %}
                                                     Venerdì, {% endif %}{{ impegno[7] }}</td>
                                             {% endif %}
-                                            <td><a href="/user_inspect/{{ impegno[12] }}"><i class="fa fa-graduation-cap"
-                                                                                            aria-hidden="true"></i></a>
+                                            <td><a href="/user_inspect/{{ impegno[12] }}"><i
+                                                    class="fa fa-graduation-cap"
+                                                    aria-hidden="true"></i></a>
                                                 <a href="/user_inspect/{{ impegno[5] }}"><i class="fa fa-users"
-                                                                                             aria-hidden="true"></i></a>
-                                                {% if utente.tipo > 1 %}
-                                                <a href="/corso_membri/{{ impegno[1] }}"><i class="fa fa-search"
-                                                                                             aria-hidden="true"></i></a>
+                                                                                            aria-hidden="true"></i></a>
+                                                {% if utente.tipo >= 1 %}
+                                                    <a href="/corso_membri/{{ impegno[1] }}"><i class="fa fa-search"
+                                                                                                aria-hidden="true"></i></a>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -99,9 +100,9 @@
                                 {% if lezioni %}
                                     {% for lezione in lezioni %}
                                         <tr>
-                                            <td>{{ lezione[6] }}</td>
+                                            <td>{{ lezione[5] }}</td>
                                             {% if lezione[8] %}
-                                                <td>{{ lezione[8]}}</td>
+                                                <td>{{ lezione[8] }}</td>
                                             {% else %}
                                                 <td>{% if lezione[6] == "1" %}Lunedì, {% elif lezione[6] == "2" %}
                                                     Martedì, {% elif lezione[6] == "3" %}
@@ -109,12 +110,11 @@
                                                     Giovedì, {% elif lezione[6] == "5" %}
                                                     Venerdì, {% endif %}{{ lezione[7] }}</td>
                                             {% endif %}
-                                            <td><a href="/user_inspect/{{ lezione[12] }}"><i class="fa fa-graduation-cap"
-                                                                                            aria-hidden="true"></i></a>
+                                            <td><a href="/user_inspect/{{ lezione[12] }}"><i
+                                                    class="fa fa-graduation-cap"
+                                                    aria-hidden="true"></i></a>
                                                 <a href="/user_inspect/{{ lezione[5] }}"><i class="fa fa-users"
-                                                                                             aria-hidden="true"></i></a>
-                                                <a href="/corso_membri/{{ lezione[1] }}"><i class="fa fa-search"
-                                                                                             aria-hidden="true"></i>
+                                                                                            aria-hidden="true"></i></a>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -180,7 +180,8 @@
                                                                                         aria-hidden="true"></i></a> {% else %}
                                                 <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
                                                                                          aria-hidden="true"></i></a> {% endif %}
-                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap" aria-hidden="true"></i></a>
+                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap"
+                                                                                           aria-hidden="true"></i></a>
                                             </td>
                                         </tr>
                                     {% endif %}
@@ -238,7 +239,8 @@
                                                                                         aria-hidden="true"></i></a> {% else %}
                                                 <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
                                                                                          aria-hidden="true"></i></a> {% endif %}
-                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap" aria-hidden="true"></i></a>
+                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap"
+                                                                                           aria-hidden="true"></i></a>
                                             </td>
                                         </tr>
                                     {% endif %}
@@ -250,6 +252,13 @@
             </div>
         </div>
         <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Numero di utenti</div>
+                <div class="card-body">
+                    Al momento, gli utenti loggati sono {{ logged }}
+                </div>
+            </div>
+            <br>
             <a href="/user_edit/{{ utente.uid }}" type="button" class="btn btn-secondary btn-lg btn-block">Modifica
                 il
                 profilo</a>
@@ -272,5 +281,5 @@
         </div>
     </div>
     <br>
-    <center>Versione di Condivisione 1.20</center>
+    <center>Versione di Condivisione R 1.20</center>
 {% endblock %}
