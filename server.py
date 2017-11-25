@@ -133,9 +133,9 @@ class Messaggio(db.Model):
 class Abilitato(db.Model):
     # Tabella di associazione
     __tablename__ = "abilitazioni"
-
-    mid = db.Column(db.Integer, db.ForeignKey('materia.mid'), primary_key=True)
-    uid = db.Column(db.Integer, db.ForeignKey('user.uid'), primary_key=True)
+    aid = db.Column(db.Integer, primary_key=True)
+    mid = db.Column(db.Integer, db.ForeignKey('materia.mid'))
+    uid = db.Column(db.Integer, db.ForeignKey('user.uid'))
 
     def __init__(self, mid, uid):
         self.mid = mid
