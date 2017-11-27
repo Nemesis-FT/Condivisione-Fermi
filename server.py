@@ -280,7 +280,7 @@ def page_register():
 @app.route('/dashboard')
 def page_dashboard():
     if 'username' not in session or 'username' is None:
-        abort(403)
+        return redirect(url_for('page_login'))
     else:
         logged=len(session)
         utente = find_user(session['username'])
