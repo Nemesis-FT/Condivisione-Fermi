@@ -616,7 +616,8 @@ def page_corso_add():
         else:
             if utente.tipo == 1:
                 if request.method == 'GET':
-                    autorizzate = Materia.query.join(Abilitato).join(User).all()
+                    autorizzate = Materia.query.join(Abilitato).filter_by(uid=utente.uid).join(User).all()
+                    print(autorizzate)
                     return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
                 else:
                     stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
