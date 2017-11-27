@@ -661,7 +661,7 @@ def page_corso_del(cid):
         abort(403)
     else:
         utente = find_user(session['username'])
-        if utente.tipo < 2:
+        if utente.tipo <= 2:
             abort(403)
         else:
             stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
