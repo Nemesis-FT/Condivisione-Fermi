@@ -228,6 +228,7 @@ def page_404(_):
 
 @app.errorhandler(500)
 def page_500(e):
+    e="Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già esistente."
     return render_template('500.htm', e=e)
 
 
