@@ -6,6 +6,7 @@ import smtplib
 from datetime import datetime, date, timedelta
 import os
 import telepot
+import threading
 from telepot.loop import MessageLoop
 
 app = Flask(__name__)
@@ -179,7 +180,6 @@ def find_user(username):
 
 
 def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
-    e = "Errore di invio mail. Il server potrebbe non essere raggiungibile o l'email immessa errata."
     try:
         header = 'From: %s' % from_addr
         header += 'To: %s' % ','.join(to_addr_list)
@@ -190,8 +190,9 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         server.login(accesso, password)
         problems = server.sendmail(from_addr, to_addr_list, message)
         server.quit()
+        return True
     except:
-        return redirect(url_for(page_500, e))
+        return False
 
 
 def rendi_data_leggibile(poccio):
@@ -705,9 +706,12 @@ def page_corso_join(cid):
             nuovoimpegno.appuntamento = corso.appuntamento
         oggetto = "Condivisione - Iscrizione alla lezione"
         mail = "\n\nSuo figlio si e' iscritto ad una lezione sulla piattaforma Condivisione. Per maggiori informazioni, collegarsi al sito.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
-        sendemail(utente.emailgenitore, oggetto, mail)
         db.session.add(nuovoimpegno)
         db.session.commit()
+        if sendemail(utente.emailgenitore, oggetto, mail):
+            pass
+        else:
+            abort(500)
         return redirect(url_for('page_dashboard'))
 
 
@@ -814,7 +818,7 @@ def page_ricerca():
                                        pagetype="query")
 
 
-@app.route('/botStart')
+@app.before_first_request
 def page_bot():
     if 'username' not in session:
         return abort(403)
@@ -823,13 +827,18 @@ def page_bot():
         if utente.tipo < 2:
             abort(403)
         else:
-            global bot
-            bot = telepot.Bot(telegramkey)
-            bot.getMe()
-            MessageLoop(bot, handle).run_as_thread()
-
+            thread = threading.Thread(target = thread)
+            thread.start()
+            return "Bot Telegram avviato. API in ascolto."
 
 # Bot
+
+
+def thread():
+    global bot
+    bot = telepot.Bot(telegramkey)
+    bot.getMe()
+    MessageLoop(bot, handle).run_as_thread()
 
 
 def handle(msg):
