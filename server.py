@@ -827,7 +827,7 @@ def thread():
         pass
 
 
-@app.route('/botStart')
+@app.before_first_request
 def page_bot():
     processo = threading.Thread(target=thread)
     processo.start()
