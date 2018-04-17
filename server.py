@@ -829,8 +829,8 @@ def thread():
 
 @app.route('/botStart')
 def page_bot():
-    thread = threading.Thread(target=thread)
-    thread.start()
+    processo = threading.Thread(target=thread)
+    processo.start()
     print("Bot Telegram avviato. API in ascolto.")
 
 
