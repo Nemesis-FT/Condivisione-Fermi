@@ -823,11 +823,9 @@ def thread():
     bot = telepot.Bot(telegramkey)
     bot.getMe()
     MessageLoop(bot, handle).run_as_thread()
-    while True:
-        pass
 
 
-@app.before_first_request
+@app.route('/botStart')
 def page_bot():
     if 'username' not in session:
         return abort(403)
