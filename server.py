@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 import os
 import telepot
 import threading
+import requests
 from telepot.loop import MessageLoop
 
 app = Flask(__name__)
@@ -687,6 +688,7 @@ def page_corso_join(cid):
     if 'username' not in session:
         abort(403)
     else:
+        global telegramkey
         utente = find_user(session['username'])
         impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
         for impegno in impegni:
@@ -712,6 +714,19 @@ def page_corso_join(cid):
             pass
         else:
             abort(500)
+        if utente.telegram_chat_id:
+            testo = "Ti sei iscritto al corso di {}, che si terrà il prossimo lunedì!".format(corso.materia)
+            param = {"chat_id": utente.telegram_chat_id, "text": testo}
+            requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
+        else:
+            pass
+        insegnante = User.query.get_or_404(corso.pid)
+        if insegnante.telegram_chat_id:
+            testo = "Lo studente {} {} si è iscritto al tuo corso!".format(utente.nome, utente.cognome)
+            param = {"chat_id": utente.telegram_chat_id, "text": testo}
+            requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
+        else:
+            pass
         return redirect(url_for('page_dashboard'))
 
 
