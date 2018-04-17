@@ -829,9 +829,17 @@ def thread():
 
 @app.before_first_request
 def page_bot():
-    processo = threading.Thread(target=thread)
-    processo.start()
-    print("Bot Telegram avviato. API in ascolto.")
+    if 'username' not in session:
+        return abort(403)
+    else:
+        utente = find_user(session['username'])
+        if utente.tipo < 2:
+            abort(403)
+        else:
+            processo = threading.Thread(target=thread)
+            processo.start()
+            print("Bot Telegram avviato. API in ascolto.")
+            return "Successo!"
 
 
 # Bot
