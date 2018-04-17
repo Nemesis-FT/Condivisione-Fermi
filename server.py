@@ -822,7 +822,7 @@ def page_ricerca():
 def page_bot():
     thread = threading.Thread(target=thread)
     thread.start()
-    return "Bot Telegram avviato. API in ascolto."
+    print("Bot Telegram avviato. API in ascolto.")
 
 
 # Bot
@@ -833,6 +833,8 @@ def thread():
     bot = telepot.Bot(telegramkey)
     bot.getMe()
     MessageLoop(bot, handle).run_as_thread()
+    while True:
+        pass
 
 
 def handle(msg):
