@@ -229,7 +229,7 @@ def page_404(_):
 
 @app.errorhandler(500)
 def page_500(e):
-    e="Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già esistente."
+    e = "Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già esistente."
     return render_template('500.htm', e=e)
 
 
@@ -284,7 +284,7 @@ def page_dashboard():
     if 'username' not in session or 'username' is None:
         return redirect(url_for('page_login'))
     else:
-        logged=len(session)
+        logged = len(session)
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
@@ -818,18 +818,12 @@ def page_ricerca():
                                        pagetype="query")
 
 
-@app.before_first_request
+@app.route('/botStart')
 def page_bot():
-    if 'username' not in session:
-        return abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
-        else:
-            thread = threading.Thread(target = thread)
-            thread.start()
-            return "Bot Telegram avviato. API in ascolto."
+    thread = threading.Thread(target=thread)
+    thread.start()
+    return "Bot Telegram avviato. API in ascolto."
+
 
 # Bot
 
