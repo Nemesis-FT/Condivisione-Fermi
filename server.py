@@ -818,16 +818,6 @@ def page_ricerca():
                                        pagetype="query")
 
 
-@app.route('/botStart')
-def page_bot():
-    thread = threading.Thread(target=thread)
-    thread.start()
-    print("Bot Telegram avviato. API in ascolto.")
-
-
-# Bot
-
-
 def thread():
     global bot
     bot = telepot.Bot(telegramkey)
@@ -836,6 +826,15 @@ def thread():
     while True:
         pass
 
+
+@app.route('/botStart')
+def page_bot():
+    thread = threading.Thread(target=thread)
+    thread.start()
+    print("Bot Telegram avviato. API in ascolto.")
+
+
+# Bot
 
 def handle(msg):
     with app.app_context():
