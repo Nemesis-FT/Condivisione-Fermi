@@ -9,22 +9,21 @@ import telepot
 import threading
 import requests
 from telepot.loop import MessageLoop
+from raven.contrib.flask import Sentry
+from raven import Client
 
 app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password = dati.split("|",
-                                                               4)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail
-print(appkey)
-print(telegramkey)
-print(from_addr)
-print(accesso)
-print(password)
+appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|",
+                                                               5)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+client = Client(dsn)
+sentry = Sentry(app, client=client)
 
 
 # Classi
@@ -772,6 +771,23 @@ def page_presenza(uid, cid):
                 impegno.presente = False
             else:
                 impegno.presente = True
+            db.session.commit()
+            return redirect(url_for('corso_membri', cid=cid))
+
+
+@app.route('/impegno_del/<int:uid>/<int:cid>')
+def page_impegno_del(uid, cid):
+    if 'username' not in session:
+        abort(403)
+    else:
+        utente = find_user(session['username'])
+        lezione = Corso.query.get(cid)
+        if utente.tipo < 1 or utente.uid != lezione.pid:
+            abort(403)
+        else:
+            impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
+            lezione.occupati = lezione.occupati - 1
+            db.session.delete(impegno)
             db.session.commit()
             return redirect(url_for('corso_membri', cid=cid))
 
