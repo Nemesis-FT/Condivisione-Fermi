@@ -11,6 +11,7 @@ import requests
 from telepot.loop import MessageLoop
 from raven.contrib.flask import Sentry
 from raven import Client
+from flask_wtf import RecaptchaField, FlaskForm
 
 app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
@@ -24,7 +25,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 client = Client(dsn)
 sentry = Sentry(app, client=client)
-
+RECAPTCHA_PUBLIC_KEY = ''
+RECAPTCHA_PRIVATE_KEY = ''
+app.config.from_object(__name__)
 
 # Classi
 # TODO: aggiungere bot
@@ -163,6 +166,10 @@ class SessioneBot:
         self.nomemenu = nomemenu
 
 
+class CaptchaForm(FlaskForm):
+    recaptcha = RecaptchaField()
+
+
 # Funzioni
 
 
@@ -261,22 +268,27 @@ def page_login():
 @app.route('/register', methods=['GET', 'POST'])
 def page_register():
     if request.method == 'GET':
-        return render_template("User/add.htm")
+        form = CaptchaForm()
+        return render_template("User/add.htm", captcha=form)
     else:
-        p = bytes(request.form["password"], encoding="utf-8")
-        cenere = bcrypt.hashpw(p, bcrypt.gensalt())
-        utenti = User.query.all()
-        valore = 0
-        if len(utenti) == 0:
-            valore = 3
-        nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                         request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
-        stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
-        nuovorecord = Log(stringa, datetime.today())
-        db.session.add(nuovorecord)
-        db.session.add(nuovouser)
-        db.session.commit()
-        return redirect(url_for('page_login'))
+        if request.form['g-recaptcha-response']:
+            p = bytes(request.form["password"], encoding="utf-8")
+            cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+            utenti = User.query.all()
+            valore = 0
+            if len(utenti) == 0:
+                valore = 3
+            nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
+                             request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
+
+            stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            db.session.add(nuovouser)
+            db.session.commit()
+            return redirect(url_for('page_login'))
+        else:
+            abort(403)
 
 
 @app.route('/dashboard')
