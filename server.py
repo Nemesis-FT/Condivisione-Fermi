@@ -14,7 +14,7 @@ from raven import Client
 from flask_wtf import RecaptchaField, FlaskForm
 
 app = Flask(__name__)
-# app.secret_key = os.environ["flask_secret_key"]
+app.secret_key = os.environ.get("flask_secret_key")
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
 # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
