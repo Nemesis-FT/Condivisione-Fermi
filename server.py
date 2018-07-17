@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import text
 import bcrypt
 import smtplib
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import os
 import telepot
 import threading
@@ -17,8 +17,8 @@ app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|",
-                                                               5)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
+# Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
+appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|", 5)
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -31,6 +31,7 @@ app.config.from_object(__name__)
 
 # Classi
 # TODO: aggiungere bot
+
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -161,7 +162,7 @@ class Log(db.Model):
 
 
 class SessioneBot:
-    def __init__(self, utente, nomemenu, autenticato=0):
+    def __init__(self, utente, nomemenu):
         self.utente = utente
         self.nomemenu = nomemenu
 
@@ -186,7 +187,7 @@ def find_user(username):
     return User.query.filter_by(username=username).first()
 
 
-def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
+def send_email(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
     try:
         header = 'From: %s' % from_addr
         header += 'To: %s' % ','.join(to_addr_list)
@@ -195,7 +196,7 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         server = smtplib.SMTP(smtpserver)
         server.starttls()
         server.login(accesso, password)
-        problems = server.sendmail(from_addr, to_addr_list, message)
+        server.sendmail(from_addr, to_addr_list, message)
         server.quit()
         return True
     except:
@@ -210,7 +211,9 @@ def rendi_data_leggibile(poccio):
     return risultato
 
 
-def broadcast(msg, utenti=[]):
+def broadcast(msg, utenti=None):
+    if utenti is None:
+        utenti = []
     for utente in utenti:
         if utente.telegram_chat_id:
             bot.sendMessage(utente.telegram_chat_id, msg)
@@ -236,7 +239,9 @@ def page_404(_):
 
 @app.errorhandler(500)
 def page_500(e):
-    e = "Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già esistente."
+    e = "Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia" \
+        " il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già" \
+        " esistente."
     return render_template('500.htm', e=e)
 
 
@@ -718,10 +723,14 @@ def page_corso_join(cid):
             print(corso.materia.nome)
             nuovoimpegno.appuntamento = corso.appuntamento
         oggetto = "Condivisione - Iscrizione alla lezione"
-        mail = "\n\nSuo figlio si e' iscritto ad una lezione sulla piattaforma Condivisione. Per maggiori informazioni, collegarsi al sito.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+        mail = "\n\nSuo figlio si e' iscritto ad una lezione sulla piattaforma Condivisione. Per maggiori" \
+               " informazioni, collegarsi al sito.\n" \
+               "Questo messaggio e' stato creato automaticamente da Condivisione." \
+               " Messaggi inviati a questo indirizzo non verranno letti." \
+               " Per qualsiasi problema, contattare la segreteria."
         db.session.add(nuovoimpegno)
         db.session.commit()
-        if sendemail(utente.emailgenitore, oggetto, mail):
+        if send_email(utente.emailgenitore, oggetto, mail):
             pass
         else:
             abort(500)
@@ -819,12 +828,18 @@ def page_inizia(cid):
         for utente2 in utenti:
             if str(utente2[9]) == 1:
                 oggetto = "Condivisione - Partecipazione alla lezione"
-                mail = "\n\nSuo figlio e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
-                sendemail(utente2[12], oggetto, mail)
+                mail = "\n\nSuo figlio e' presente alla lezione di oggi pomeriggio.\n" \
+                       "Questo messaggio e' stato creato automaticamente da Condivisione." \
+                       " Messaggi inviati a questo indirizzo non verranno letti." \
+                       " Per qualsiasi problema, contattare la segreteria."
+                send_email(utente2[12], oggetto, mail)
             else:
                 oggetto = "Condivisione - Assenza alla lezione"
-                mail = "\n\nSuo figlio non e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
-                sendemail(utente2[12], oggetto, mail)
+                mail = "\n\nSuo figlio non e' presente alla lezione di oggi pomeriggio.\n" \
+                       "Questo messaggio e' stato creato automaticamente da Condivisione." \
+                       " Messaggi inviati a questo indirizzo non verranno letti." \
+                       " Per qualsiasi problema, contattare la segreteria."
+                send_email(utente2[12], oggetto, mail)
         stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
@@ -885,6 +900,7 @@ def page_bot():
 
 # Bot
 
+
 def handle(msg):
     with app.app_context():
         content_type, chat_type, chat_id = telepot.glance(msg)
@@ -899,7 +915,9 @@ def handle(msg):
                 testo = msg['text']
                 if testo == "/aiuto":
                     bot.sendMessage(chat_id,
-                                    "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
+                                    "I comandi disponibili sono:\n"
+                                    "/aiuto - Lista comandi\n"
+                                    "/impegni - Lista degli impegni\n")
                 elif testo == "/impegni":
 
                     query1 = text(
@@ -926,6 +944,8 @@ def handle(msg):
                                     giorno = "Giovedì"
                                 elif str(impegno[6]) == "5":
                                     giorno = "Venerdì"
+                                else:
+                                    raise ValueError("Il giorno dell'impegno è un valore non previsto.")
                                 ora = str(impegno[7])
                                 messaggio += giorno + " " + ora + "\n"
                     if len(lezioni) > 0:
@@ -945,6 +965,8 @@ def handle(msg):
                                     giorno = "Giovedì"
                                 elif str(impegno[6]) == "5":
                                     giorno = "Venerdì"
+                                else:
+                                    raise ValueError("Il giorno dell'impegno è un valore non previsto.")
                                 ora = str(impegno[7])
                                 messaggio += giorno + " " + ora + "\n"
                     if len(lezioni) == 0 and len(impegni) == 0:
@@ -958,10 +980,14 @@ def accedi(chat_id, username):
         print(username)
         if not utenti:
             bot.sendMessage(chat_id,
-                            "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
+                            "Si è verificato un problema con l'autenticazione."
+                            " Assicurati di aver impostato correttamete il tuo username su Condivisione")
         else:
             bot.sendMessage(chat_id,
-                            "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
+                            "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà"
+                            " creato e riepilogherà i tuoi impegni.\n"
+                            "Per dissociare questo account, visita Condivisione.\n\n"
+                            "Per visualizzare i comandi, digita /aiuto.")
             utenti[0].telegram_chat_id = chat_id
             db.session.commit()
 
