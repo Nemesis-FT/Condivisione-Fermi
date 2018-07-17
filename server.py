@@ -15,8 +15,12 @@ from flask_wtf import RecaptchaField, FlaskForm
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("flask_secret_key")
-chiavi = open("configurazione.txt", 'r')
-dati = chiavi.readline()
+try:
+    with open("configurazione.txt", 'r') as chiavi:
+        dati = chiavi.readline()
+except OSError:
+    print("Errore nel caricamento del file 'configurazione.txt'.\n"
+          "Probabilmente non esiste.")
 # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
 appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|", 5)
 app.secret_key = appkey
