@@ -1,5 +1,8 @@
 flask
 flask_sqlalchemy
+flask_wtf
 sqlalchemy
 bcrypt
 telepot
+requests
+raven
