@@ -1,7 +1,7 @@
 .card-header-d{
   border: none !important;
   border-radius: 0 !important;
-  background-color: #e9ecef!important
+  background-color: #e9ecef !important
 }
 
 .card-d{
@@ -9,8 +9,8 @@
 }
 
 .card-body-d-m{
-  border-left:  2px solid #e9ecef!important;
-  border-right: 2px solid #e9ecef!important;
+  border-left:  2px solid #e9ecef !important;
+  border-right: 2px solid #e9ecef !important;
 }
 
 .card-body-d-d{
