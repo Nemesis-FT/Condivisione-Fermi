@@ -327,7 +327,7 @@ def page_dashboard():
 
 
 @app.route('/informazioni')
-def page_informaizoni():
+def page_informazioni():
     return render_template("informazioni.htm")
 
 
