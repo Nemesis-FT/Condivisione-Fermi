@@ -315,11 +315,15 @@ def page_dashboard():
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
-        query1 = text(
-            "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, "
+                      "corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid "
+                      "JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid "
+                      "WHERE corso.pid=:x;")
         impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-        query2 = text(
-            "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, "
+                      "corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid "
+                      "JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid "
+                      "WHERE impegno.stud_id=:x;")
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
         db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
@@ -782,7 +786,8 @@ def corso_membri(cid):
         if utente.tipo < 1:
             abort(403)
         query = text(
-            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON "
+            "corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
         utenti = db.session.execute(query, {"x": cid}).fetchall()
         return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
 
@@ -833,7 +838,8 @@ def page_inizia(cid):
         if utente.tipo < 1 or utente.uid != lezione.pid:
             abort(403)
         query = text(
-            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso "
+            "JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
         utenti = db.session.execute(query, {"x": cid}).fetchall()
         for utente2 in utenti:
             if str(utente2[9]) == 1:
@@ -931,10 +937,16 @@ def handle(msg):
                 elif testo == "/impegni":
 
                     query1 = text(
-                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, "
+                        "corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid"
+                        " JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid "
+                        "WHERE corso.pid=:x;")
                     impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
                     query2 = text(
-                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, "
+                        "corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid"
+                        " JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid "
+                        "WHERE impegno.stud_id=:x;")
                     lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
                     messaggio = ""
                     if len(impegni) > 0:
