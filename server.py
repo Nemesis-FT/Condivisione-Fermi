@@ -1,5 +1,5 @@
 from flask import Flask, session, url_for, redirect, request, render_template, abort
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy, _BoundDeclarativeMeta
 from sqlalchemy.sql import text
 import bcrypt
 import smtplib
@@ -12,6 +12,7 @@ from telepot.loop import MessageLoop
 from raven.contrib.flask import Sentry
 from raven import Client
 from flask_wtf import RecaptchaField, FlaskForm, Recaptcha
+import re
 
 app = Flask(__name__)
 try:
@@ -224,6 +225,10 @@ def broadcast(msg, utenti=None):
             bot.sendMessage(utente.telegram_chat_id, msg)
 
 
+def validate_email(email: str) -> bool:
+    match = re.match(r"""(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])""", email)
+    return bool(match)
+
 # Gestori Errori
 
 
@@ -285,6 +290,11 @@ def page_register():
     if not Recaptcha(request.form.get('g-recaptcha-response')):
         # Invalid captcha
         abort(403)
+        return
+    # Validate email
+    if not (validate_email(request.form['username']) and validate_email(request.form['mailGenitori'])):
+        # Invalid emails
+        abort(400)
         return
     # Complete registration
     p = bytes(request.form["password"], encoding="utf-8")
