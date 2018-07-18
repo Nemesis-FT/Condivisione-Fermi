@@ -11,19 +11,20 @@ import requests
 from telepot.loop import MessageLoop
 from raven.contrib.flask import Sentry
 from raven import Client
-from flask_wtf import RecaptchaField, FlaskForm
+from flask_wtf import RecaptchaField, FlaskForm, Recaptcha
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("flask_secret_key")
 try:
     with open("configurazione.txt", 'r') as chiavi:
         dati = chiavi.readline()
 except OSError:
     print("Errore nel caricamento del file 'configurazione.txt'.\n"
           "Probabilmente non esiste.")
+    exit(1)
 # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
-appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|", 5)
-app.secret_key = appkey
+# noinspection PyUnboundLocalVariable
+app_key, telegram_key, from_addr, email_username, email_password, dsn = dati.split("|", 5)
+app.secret_key = app_key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -199,7 +200,7 @@ def send_email(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         message = header + message
         server = smtplib.SMTP(smtpserver)
         server.starttls()
-        server.login(accesso, password)
+        server.login(email_username, email_password)
         server.sendmail(from_addr, to_addr_list, message)
         server.quit()
         return True
@@ -279,25 +280,30 @@ def page_register():
     if request.method == 'GET':
         form = CaptchaForm()
         return render_template("User/add.htm", captcha=form)
-    else:
-        if request.form['g-recaptcha-response']:
-            p = bytes(request.form["password"], encoding="utf-8")
-            cenere = bcrypt.hashpw(p, bcrypt.gensalt())
-            utenti = User.query.all()
-            valore = 0
-            if len(utenti) == 0:
-                valore = 3
-            nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                             request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
+    if not request.form.get('g-recaptcha-response'):
+        abort(403)
+        return
+    # Validate CAPTCHA
+    if not Recaptcha(request.form.get('g-recaptcha-response')):
+        # Invalid captcha
+        abort(403)
+        return
+    # Complete registration
+    p = bytes(request.form["password"], encoding="utf-8")
+    cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+    utenti = User.query.all()
+    valore = 0
+    if len(utenti) == 0:
+        valore = 3
+    nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
+                     request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
 
-            stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            db.session.add(nuovouser)
-            db.session.commit()
-            return redirect(url_for('page_login'))
-        else:
-            abort(403)
+    stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    db.session.add(nuovouser)
+    db.session.commit()
+    return redirect(url_for('page_login'))
 
 
 @app.route('/dashboard')
@@ -708,7 +714,7 @@ def page_corso_join(cid):
     if 'username' not in session:
         abort(403)
     else:
-        global telegramkey
+        global telegram_key
         utente = find_user(session['username'])
         impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
         for impegno in impegni:
@@ -741,14 +747,14 @@ def page_corso_join(cid):
         if utente.telegram_chat_id:
             testo = "Ti sei iscritto al corso di {}, che si terrà il prossimo lunedì!".format(corso.materia)
             param = {"chat_id": utente.telegram_chat_id, "text": testo}
-            requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
+            requests.get("https://api.telegram.org/bot" + telegram_key + "/sendMessage", params=param)
         else:
             pass
         insegnante = User.query.get_or_404(corso.pid)
         if insegnante.telegram_chat_id:
             testo = "Lo studente {} {} si è iscritto al tuo corso!".format(utente.nome, utente.cognome)
             param = {"chat_id": utente.telegram_chat_id, "text": testo}
-            requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
+            requests.get("https://api.telegram.org/bot" + telegram_key + "/sendMessage", params=param)
         else:
             pass
         return redirect(url_for('page_dashboard'))
@@ -882,7 +888,7 @@ def page_ricerca():
 
 def thread():
     global bot
-    bot = telepot.Bot(telegramkey)
+    bot = telepot.Bot(telegram_key)
     bot.getMe()
     MessageLoop(bot, handle).run_as_thread()
 
