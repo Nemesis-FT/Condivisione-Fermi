@@ -1,5 +1,5 @@
 from flask import Flask, session, url_for, redirect, request, render_template, abort
-from flask_sqlalchemy import SQLAlchemy, _BoundDeclarativeMeta
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import text
 import bcrypt
 import smtplib
@@ -307,7 +307,7 @@ def page_register():
                      request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
 
     stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     db.session.add(nuovouser)
     db.session.commit()
@@ -402,7 +402,7 @@ def page_user_changepw(uid):
         return render_template("User/changepw.htm", utente=utente, entita=entita)
     else:
         stringa = "L'utente " + utente.username + " ha cambiato la password a " + str(uid)
-        nuovorecord = Log(stringa, datetime.today())
+        nuovorecord = Log(stringa, datetime.now())
         db.session.add(nuovorecord)
         entita = User.query.get_or_404(uid)
         p = bytes(request.form["password"], encoding="utf-8")
@@ -422,7 +422,7 @@ def page_user_ascend(uid):
         abort(403)
         return
     stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     entita = User.query.get_or_404(uid)
     if request.method == 'GET' and entita.tipo == 0:
@@ -460,7 +460,7 @@ def page_user_godify(uid):
         abort(403)
         return
     stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     entita = User.query.get_or_404(uid)
     if entita.tipo == 3:
@@ -502,20 +502,20 @@ def page_user_del(uid):
         abort(403)
         return
     stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     entita = User.query.get_or_404(uid)
     corsi = Corso.query.filter_by(pid=entita.uid).all()
     for corso in corsi:
         stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-        nuovorecord = Log(stringa, datetime.today())
+        nuovorecord = Log(stringa, datetime.now())
         db.session.add(nuovorecord)
         for oggetti in corso.impegno:
             db.session.delete(oggetti)
         db.session.delete(corso)
     for materia in entita.materie:
         stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
-        nuovorecord = Log(stringa, datetime.today())
+        nuovorecord = Log(stringa, datetime.now())
         db.session.add(nuovorecord)
         db.session.delete(materia)
     for compito in entita.impegno:
@@ -549,7 +549,7 @@ def page_user_edit(uid):
         return render_template("User/edit.htm", utente=utente, entita=entita)
     else:
         stringa = "L'utente " + utente.username + " ha modificato il proprio profilo"
-        nuovorecord = Log(stringa, datetime.today())
+        nuovorecord = Log(stringa, datetime.now())
         db.session.add(nuovorecord)
         entita = User.query.get_or_404(uid)
         p = bytes(request.form["password"], encoding="utf-8")
@@ -575,7 +575,7 @@ def page_materia_add():
         return render_template("Materia/add.htm", utente=utente)
     # POST
     stringa = "L'utente " + utente.username + " ha creato una materia "
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"],
                            request.form['ora'])
@@ -610,7 +610,7 @@ def page_materia_edit(mid):
         materia = Materia.query.get_or_404(mid)
         return render_template("Materia/edit.htm", utente=utente, materia=materia)
     stringa = "L'utente " + utente.username + " ha modificato la materia " + str(mid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     materia = Materia.query.get_or_404(mid)
     materia.nome = request.form['nome']
@@ -633,14 +633,14 @@ def page_materia_del(mid):
     materia = Materia.query.get_or_404(mid)
     corsi = Corso.query.filter_by(materia_id=mid).all()
     stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     for corso in corsi:
         for impegni in corso.impegno:
             db.session.delete(impegni)
         db.session.delete(corso)
         stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-        nuovorecord = Log(stringa, datetime.today())
+        nuovorecord = Log(stringa, datetime.now())
         db.session.add(nuovorecord)
     db.session.delete(materia)
     db.session.commit()
@@ -663,7 +663,7 @@ def page_corso_add():
             return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
         else:
             stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
-            nuovorecord = Log(stringa, datetime.today())
+            nuovorecord = Log(stringa, datetime.now())
             db.session.add(nuovorecord)
             nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 0)
             db.session.add(nuovocorso)
@@ -675,7 +675,7 @@ def page_corso_add():
             return render_template("Recuperi/add.htm", utente=utente, materie=materie)
         else:
             stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
-            nuovorecord = Log(stringa, datetime.today())
+            nuovorecord = Log(stringa, datetime.now())
             db.session.add(nuovorecord)
             nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
             yyyy, mm, dd = request.form["data"].split("-", 2)
@@ -708,7 +708,7 @@ def page_corso_del(cid):
         abort(403)
         return
     stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     corso = Corso.query.get_or_404(cid)
     impegni = Impegno.query.all()
@@ -716,7 +716,7 @@ def page_corso_del(cid):
         if impegno.corso_id == cid:
             db.session.delete(impegno)
             stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
-            nuovorecord = Log(stringa, datetime.today())
+            nuovorecord = Log(stringa, datetime.now())
             db.session.add(nuovorecord)
     db.session.delete(corso)
     db.session.commit()
@@ -739,7 +739,7 @@ def page_corso_join(cid):
         return redirect(url_for('page_dashboard'))
     corso.occupati = corso.occupati + 1
     stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     nuovoimpegno = Impegno(studente=utente,
                            corso_id=cid, presente=False)
@@ -754,9 +754,7 @@ def page_corso_join(cid):
            " Per qualsiasi problema, contattare la segreteria."
     db.session.add(nuovoimpegno)
     db.session.commit()
-    if not send_email(utente.emailgenitore, oggetto, mail):
-        abort(500)
-        return
+    send_email(utente.emailgenitore, oggetto, mail)
     if utente.telegram_chat_id:
         testo = "Ti sei iscritto al corso di {}, che si terrà il prossimo lunedì!".format(corso.materia)
         param = {"chat_id": utente.telegram_chat_id, "text": testo}
@@ -867,7 +865,7 @@ def page_inizia(cid):
                    " Per qualsiasi problema, contattare la segreteria."
             send_email(utente2[12], oggetto, mail)
     stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
-    nuovorecord = Log(stringa, datetime.today())
+    nuovorecord = Log(stringa, datetime.now())
     db.session.add(nuovorecord)
     corso = Corso.query.get_or_404(cid)
     impegni = Impegno.query.all()
@@ -875,7 +873,7 @@ def page_inizia(cid):
         if impegno.corso_id == cid:
             db.session.delete(impegno)
             stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
-            nuovorecord = Log(stringa, datetime.today())
+            nuovorecord = Log(stringa, datetime.now())
             db.session.add(nuovorecord)
     db.session.delete(corso)
     db.session.commit()
@@ -955,7 +953,7 @@ def handle(msg):
                     impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
                     query2 = text(
                         "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, "
-                        "corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid"
+                        "corso.limite, corso.occupati, corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid"
                         " JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid "
                         "WHERE impegno.stud_id=:x;")
                     lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
@@ -1031,7 +1029,7 @@ if __name__ == "__main__":
         db.create_all()
         db.session.commit()
     nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.",
-                     datetime.today())
+                     datetime.now())
     print("Bot di Telegram avviato!")
     db.session.add(nuovrecord)
     db.session.commit()
