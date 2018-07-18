@@ -5,4 +5,5 @@ sqlalchemy
 bcrypt
 telepot
 requests
-raven
+raven[flask]
+blinker
