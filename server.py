@@ -11,23 +11,24 @@ import requests
 from telepot.loop import MessageLoop
 from raven.contrib.flask import Sentry
 from raven import Client
-from flask_wtf import RecaptchaField, FlaskForm
+from flask_wtf import RecaptchaField, FlaskForm, Recaptcha
 
 app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
 appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|",
-                                                               5)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
+                                                                    5)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 client = Client(dsn)
 sentry = Sentry(app, client=client)
-RECAPTCHA_PUBLIC_KEY = ''
-RECAPTCHA_PRIVATE_KEY = ''
+RECAPTCHA_PUBLIC_KEY = '6LeYIbsSAAAAACRPIllxA7wvXjIE411PfdB2gt2J'
+RECAPTCHA_PRIVATE_KEY = '6LeYIbsSAAAAAJezaIq3Ft_hSTo0YtyeFG-JgRtu'
 app.config.from_object(__name__)
+
 
 # Classi
 # TODO: aggiungere bot
@@ -271,24 +272,29 @@ def page_register():
         form = CaptchaForm()
         return render_template("User/add.htm", captcha=form)
     else:
-        if request.form['g-recaptcha-response']:
-            p = bytes(request.form["password"], encoding="utf-8")
-            cenere = bcrypt.hashpw(p, bcrypt.gensalt())
-            utenti = User.query.all()
-            valore = 0
-            if len(utenti) == 0:
-                valore = 3
-            nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
-                             request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
-
-            stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            db.session.add(nuovouser)
-            db.session.commit()
-            return redirect(url_for('page_login'))
-        else:
+        if not request.form.get('g-recaptcha-response'):
             abort(403)
+            return
+        # Validate CAPTCHA
+        if not Recaptcha(request.form.get('g-recaptcha-response')):
+            # Invalid captcha
+            abort(403)
+            return
+        p = bytes(request.form["password"], encoding="utf-8")
+        cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+        utenti = User.query.all()
+        valore = 0
+        if len(utenti) == 0:
+            valore = 3
+        nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
+                         request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
+
+        stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        db.session.add(nuovouser)
+        db.session.commit()
+        return redirect(url_for('page_login'))
 
 
 @app.route('/dashboard')
