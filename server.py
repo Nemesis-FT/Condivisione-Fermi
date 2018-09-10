@@ -17,16 +17,16 @@ app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password, dsn = dati.split("|",
-                                                                    5)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn
+appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata = dati.split("|",
+                                                                    7)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 client = Client(dsn)
 sentry = Sentry(app, client=client)
-RECAPTCHA_PUBLIC_KEY = '6LeYIbsSAAAAACRPIllxA7wvXjIE411PfdB2gt2J'
-RECAPTCHA_PRIVATE_KEY = '6LeYIbsSAAAAAJezaIq3Ft_hSTo0YtyeFG-JgRtu'
+RECAPTCHA_PUBLIC_KEY = recaptcha_pubblica
+RECAPTCHA_PRIVATE_KEY = recaptcha_privata
 app.config.from_object(__name__)
 
 
