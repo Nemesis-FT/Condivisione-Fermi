@@ -18,7 +18,7 @@ app = Flask(__name__)
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
 appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|",
-                                                                    7)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
+                                                                    8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
