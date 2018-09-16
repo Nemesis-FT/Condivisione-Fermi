@@ -17,8 +17,8 @@ app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata = dati.split("|",
-                                                                    7)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey
+appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|",
+                                                                    7)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -889,11 +889,12 @@ def page_brasatura(mode):
                     db.session.add(nuovorecord)
                     for compito in utente.impegno:
                         db.session.delete(compito)
-                    res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
-                    if not res:
-                        print("Errore Invio ad indirizzo primario.")
-                        sendemail(utente.emailgenitore, "Cancellazione utente",
-                                  "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                    if brasamail == "si":
+                        res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                        if not res:
+                            print("Errore Invio ad indirizzo primario.")
+                            sendemail(utente.emailgenitore, "Cancellazione utente",
+                                      "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
                     db.session.delete(utente)
                     db.session.commit()
                 dump = open("maildump.csv", 'w')
