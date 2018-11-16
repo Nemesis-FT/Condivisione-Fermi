@@ -824,7 +824,7 @@ def page_inizia(cid):
             "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
         utenti = db.session.execute(query, {"x": cid}).fetchall()
         for utente2 in utenti:
-            if str(utente2[9]) == 1:
+            if utente2[9]:
                 oggetto = "Condivisione - Partecipazione alla lezione"
                 mail = "\n\nSuo figlio e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
                 sendemail(utente2[12], oggetto, mail)
