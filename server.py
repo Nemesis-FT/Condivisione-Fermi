@@ -23,16 +23,18 @@ dati = chiavi.readline()
 # from_addr : indirizzo di posta utilizzato per le notifiche email
 # smtp_login, smtp_password : login e password per l'SMTP
 # sentry_dsn : token per il reporting automatico degli errori a sentry.io
-# recaptcha_pubblica, recaptcha_privata : chiavi pubblica e privata di recaptcha, ottenibili da google
+# RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY : chiavi pubblica e privata di recaptcha, ottenibili da google
 # brasamail : se "si", elimina tutti gli account non privilegiati
-app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
+app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-client = Client(sentry_dsn)
-sentry = Sentry(app, client=client)
-RECAPTCHA_PUBLIC_KEY = recaptcha_pubblica
-RECAPTCHA_PRIVATE_KEY = recaptcha_privata
+if sentry_dsn != "":
+    client = Client(sentry_dsn)
+    sentry = Sentry(app, client=client)
+else:
+    client = None
+    sentry = None
 app.config.from_object(__name__)
 
 
