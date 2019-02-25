@@ -21,15 +21,15 @@ dati = chiavi.readline()
 # app.secret_key : chiave segreta dell'applicazione flask, mantiene i login privati
 # telegramkey : API key del bot di Telegram, ottenibile a @BotFather
 # from_addr : indirizzo di posta utilizzato per le notifiche email
-# accesso, password : login e password per l'SMTP
-# dsn : token per il reporting automatico degli errori a sentry.io
+# smtp_login, smtp_password : login e password per l'SMTP
+# sentry_dsn : token per il reporting automatico degli errori a sentry.io
 # recaptcha_pubblica, recaptcha_privata : chiavi pubblica e privata di recaptcha, ottenibili da google
 # brasamail : se "si", elimina tutti gli account non privilegiati
-app.secret_key, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
+app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-client = Client(dsn)
+client = Client(sentry_dsn)
 sentry = Sentry(app, client=client)
 RECAPTCHA_PUBLIC_KEY = recaptcha_pubblica
 RECAPTCHA_PRIVATE_KEY = recaptcha_privata
@@ -168,7 +168,7 @@ class Log(db.Model):
 
 
 class SessioneBot:
-    def __init__(self, utente, nomemenu, autenticato=0):
+    def __init__(self, utente, nomemenu):
         self.utente = utente
         self.nomemenu = nomemenu
 
@@ -201,12 +201,12 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         message = header + message
         server = smtplib.SMTP(smtpserver)
         server.starttls()
-        server.login(accesso, password)
+        server.login(smtp_login, smtp_password)
         problems = server.sendmail(from_addr, to_addr_list, message)
         print(problems)
         server.quit()
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -218,7 +218,9 @@ def rendi_data_leggibile(poccio):
     return risultato
 
 
-def broadcast(msg, utenti=[]):
+def broadcast(msg, utenti=None):
+    if utenti is None:
+        utenti = []
     for utente in utenti:
         if utente.telegram_chat_id:
             bot.sendMessage(utente.telegram_chat_id, msg)
@@ -243,7 +245,7 @@ def page_404(_):
 
 
 @app.errorhandler(500)
-def page_500(e):
+def page_500(_):
     e = "Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già esistente."
     return render_template('500.htm', e=e)
 
@@ -313,11 +315,9 @@ def page_dashboard():
         utente = find_user(session['username'])
         messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
         corsi = Corso.query.join(Materia).join(User).all()
-        query1 = text(
-            "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
         impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-        query2 = text(
-            "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
         db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
@@ -670,6 +670,7 @@ def page_corso_add():
                     except ValueError:
                         # TODO: metti un errore più carino
                         abort(400)
+                        return
                     nuovocorso.appuntamento = data
                     nuovocorso.limite = request.form["massimo"]
                     db.session.add(nuovocorso)
@@ -775,8 +776,7 @@ def corso_membri(cid):
         utente = find_user(session['username'])
         if utente.tipo < 1:
             abort(403)
-        query = text(
-            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+        query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
         utenti = db.session.execute(query, {"x": cid}).fetchall()
         return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
 
@@ -826,8 +826,7 @@ def page_inizia(cid):
         lezione = Corso.query.get_or_404(cid)
         if utente.tipo < 1 or utente.uid != lezione.pid:
             abort(403)
-        query = text(
-            "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+        query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
         utenti = db.session.execute(query, {"x": cid}).fetchall()
         for utente2 in utenti:
             if utente2[9]:
@@ -899,15 +898,12 @@ def page_brasatura(mode):
                         res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
                         if not res:
                             print("Errore Invio ad indirizzo primario.")
-                            sendemail(utente.emailgenitore, "Cancellazione utente",
-                                      "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                            sendemail(utente.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
                     db.session.delete(utente)
                     db.session.commit()
                 dump = open("maildump.csv", 'w')
                 dump.write(dstring)
                 return redirect(url_for('page_dashboard'))
-
-
 
 
 def thread():
@@ -947,15 +943,12 @@ def handle(msg):
                 utente = utenza[0]
                 testo = msg['text']
                 if testo == "/aiuto":
-                    bot.sendMessage(chat_id,
-                                    "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
+                    bot.sendMessage(chat_id, "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
                 elif testo == "/impegni":
 
-                    query1 = text(
-                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+                    query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
                     impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-                    query2 = text(
-                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+                    query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
                     lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
                     messaggio = ""
                     if len(impegni) > 0:
@@ -973,7 +966,7 @@ def handle(msg):
                                     giorno = "Mercoledì"
                                 elif str(impegno[6]) == "4":
                                     giorno = "Giovedì"
-                                elif str(impegno[6]) == "5":
+                                else:
                                     giorno = "Venerdì"
                                 ora = str(impegno[7])
                                 messaggio += giorno + " " + ora + "\n"
@@ -992,7 +985,7 @@ def handle(msg):
                                     giorno = "Mercoledì"
                                 elif str(impegno[6]) == "4":
                                     giorno = "Giovedì"
-                                elif str(impegno[6]) == "5":
+                                else:
                                     giorno = "Venerdì"
                                 ora = str(impegno[7])
                                 messaggio += giorno + " " + ora + "\n"
@@ -1006,11 +999,9 @@ def accedi(chat_id, username):
         utenti = User.query.filter_by(telegram_username=username).all()
         print(username)
         if not utenti:
-            bot.sendMessage(chat_id,
-                            "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
+            bot.sendMessage(chat_id, "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
         else:
-            bot.sendMessage(chat_id,
-                            "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
+            bot.sendMessage(chat_id, "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
             utenti[0].telegram_chat_id = chat_id
             db.session.commit()
 
