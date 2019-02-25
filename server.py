@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import text
 import bcrypt
 import smtplib
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import os
 import telepot
 import threading
@@ -17,8 +17,7 @@ app = Flask(__name__)
 # app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|",
-                                                                    8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
+appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.secret_key = appkey
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
