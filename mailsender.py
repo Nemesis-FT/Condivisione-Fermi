@@ -14,15 +14,15 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         print(problems)
         server.quit()
         return True
-    except:
+    except Exception:
         return False
+
 
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
 appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|",8)
 email_file = open("maildump.csv", "r")
 email = email_file.readline()
-mail = []
 mail = email.split(";")
 for indirizzo in mail:
     print(indirizzo)
