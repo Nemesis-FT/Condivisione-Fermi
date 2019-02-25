@@ -14,11 +14,18 @@ from raven import Client
 from flask_wtf import RecaptchaField, FlaskForm, Recaptcha
 
 app = Flask(__name__)
-# app.secret_key = os.environ["flask_secret_key"]
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
-app.secret_key = appkey
+# Struttura del file di configurazione
+# Parametri separati da pipe
+# app.secret_key : chiave segreta dell'applicazione flask, mantiene i login privati
+# telegramkey : API key del bot di Telegram, ottenibile a @BotFather
+# from_addr : indirizzo di posta utilizzato per le notifiche email
+# accesso, password : login e password per l'SMTP
+# dsn : token per il reporting automatico degli errori a sentry.io
+# recaptcha_pubblica, recaptcha_privata : chiavi pubblica e privata di recaptcha, ottenibili da google
+# brasamail : se "si", elimina tutti gli account non privilegiati
+app.secret_key, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
