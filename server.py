@@ -270,8 +270,13 @@ def page_login():
         css = url_for("static", filename="style.css")
         return render_template("login.htm", css=css)
     else:
-        if login(request.form['username'], request.form['password']):
-            session['username'] = request.form['username']
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if not username or not password:
+            abort(400)
+            return
+        if login(username, password):
+            session['username'] = username
             return redirect(url_for('page_dashboard'))
         else:
             abort(403)
