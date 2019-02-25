@@ -9,7 +9,7 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         message = header + message
         server = smtplib.SMTP(smtpserver)
         server.starttls()
-        server.login(accesso, password)
+        server.login(smtp_login, smtp_password)
         problems = server.sendmail(from_addr, to_addr_list, message)
         print(problems)
         server.quit()
@@ -20,7 +20,7 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
 
 chiavi = open("configurazione.txt", 'r')
 dati = chiavi.readline()
-appkey, telegramkey, from_addr, accesso, password, dsn, recaptcha_pubblica, recaptcha_privata, brasamail = dati.split("|",8)
+_, _, from_addr, smtp_login, smtp_password, _, _, _, _ = dati.split("|", 8)
 email_file = open("maildump.csv", "r")
 email = email_file.readline()
 mail = email.split(";")
