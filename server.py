@@ -233,23 +233,23 @@ def broadcast(msg, utenti=None):
 
 @app.errorhandler(400)
 def page_400(_):
-    return render_template('400.htm')
+    return render_template('400.htm'), 400
 
 
 @app.errorhandler(403)
 def page_403(_):
-    return render_template('403.htm')
+    return render_template('403.htm'), 403
 
 
 @app.errorhandler(404)
 def page_404(_):
-    return render_template('404.htm')
+    return render_template('404.htm'), 404
 
 
 @app.errorhandler(500)
 def page_500(_):
     e = "Questo tipo di errore si verifica di solito quando si fanno richieste strane al sito (ad esempio si sbaglia il formato di una data o simili) oppure quando si cerca di creare un account con un nome utente già esistente."
-    return render_template('500.htm', e=e)
+    return render_template('500.htm', e=e), 500
 
 
 # Pagine
