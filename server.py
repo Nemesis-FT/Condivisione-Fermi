@@ -291,8 +291,8 @@ def page_register():
         if not request.form.get('g-recaptcha-response'):
             abort(403)
             return
-        # Validate CAPTCHA
-        if not Recaptcha(request.form.get('g-recaptcha-response')):
+        # Validate CAPTCHA, or assume any captcha is valid while testing
+        if not Recaptcha(request.form.get('g-recaptcha-response')) and not app.config["TESTING"]:
             # Invalid captcha
             abort(403)
             return
