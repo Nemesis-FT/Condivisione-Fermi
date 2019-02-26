@@ -15,24 +15,24 @@ def app():
     return app.test_client()
 
 
-def test_register_page(app):
+def register_page(app):
     res = app.get("/register")
     assert res.status_code == 200
 
 
-def test_register_no_captcha(app):
+def register_no_captcha(app):
     res = app.post("/register")
     assert res.status_code == 403
 
 
-def test_register_only_captcha(app):
+def register_only_captcha(app):
     res = app.post("/register", data={
         "g-recaptcha-response": "sì"
     })
     assert res.status_code == 400
 
 
-def test_register_missing_fields(app):
+def register_missing_fields(app):
     res = app.post("/register", data={
         "g-recaptcha-response": "sì",
         "username": "ciao",
@@ -41,7 +41,7 @@ def test_register_missing_fields(app):
     assert res.status_code == 400
 
 
-def test_register_valid(app):
+def register_valid(app):
     res = app.post("/register", data={
         "g-recaptcha-response": "sì",
         "username": "example@example.org",
@@ -51,35 +51,35 @@ def test_register_valid(app):
         "classe": "1A",
         "usernameTelegram": "@BotFather",
         "mailGenitori": "dad@example.org"
-    })
-    assert (res.status_code == 200 or res.status_code == 302)
+    }, follow_redirects=True)
+    assert res.status_code == 200
 
 
-def test_login_page(app):
+def login_page(app):
     res = app.get("/login")
     assert res.status_code == 200
 
 
-def test_login_no_username(app):
+def login_no_username(app):
     res = app.post("/login", data={
         "password": "haha"
     })
     assert res.status_code == 400
 
 
-def test_login_no_password(app):
+def login_no_password(app):
     res = app.post("/login", data={
         "username": "sacripante"
     })
     assert res.status_code == 400
 
 
-def test_login_nothing(app):
+def login_nothing(app):
     res = app.post("/login")
     assert res.status_code == 400
 
 
-def test_login_invalid(app):
+def login_invalid(app):
     res = app.post("/login", data={
         "username": str(random.random()),
         "password": str(random.random())
@@ -87,9 +87,21 @@ def test_login_invalid(app):
     assert res.status_code == 403
 
 
-def test_login_valid(app):
+def login_valid(app):
     res = app.post("/login", data={
         "username": "example@example.org",
         "password": "password123"
-    })
-    assert (res.status_code == 200 or res.status_code == 302)
+    }, follow_redirects=True)
+    assert res.status_code == 200
+
+
+def dashboard_redirect(app):
+    res = app.get("/dashboard")
+    assert res.status_code == 302
+
+
+def dashboard_display(app):
+    with app.session_transaction() as ses:
+        ses["username"] = "example@example.org"
+        res = app.get("/dashboard")
+        assert res.status_code == 200

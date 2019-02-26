@@ -4,6 +4,7 @@ from sqlalchemy.sql import text
 import bcrypt
 import smtplib
 from datetime import datetime, date
+import functools
 import os
 import telepot
 import threading
@@ -228,6 +229,28 @@ def broadcast(msg, utenti=None):
             bot.sendMessage(utente.telegram_chat_id, msg)
 
 
+# Decoratori
+
+
+def login_or_redirect(f):
+    @functools.wraps(f)
+    def func(*args, **kwargs):
+        if not session.get("username"):
+            return redirect(url_for('page_login'))
+        return f(*args, **kwargs)
+    return func
+
+
+def login_or_403(f):
+    @functools.wraps(f)
+    def func(*args, **kwargs):
+        if not session.get("username"):
+            abort(403)
+            return
+        return f(*args, **kwargs)
+    return func
+
+
 # Gestori Errori
 
 
@@ -314,20 +337,18 @@ def page_register():
 
 
 @app.route('/dashboard')
+@login_or_redirect
 def page_dashboard():
-    if not session.get("username"):
-        return redirect(url_for('page_login'))
-    else:
-        logged = len(session)
-        utente = find_user(session['username'])
-        messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
-        corsi = Corso.query.join(Materia).join(User).all()
-        query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
-        impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-        query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
-        lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
-        return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
-                               lezioni=lezioni, logged=logged)
+    logged = len(session)
+    utente = find_user(session['username'])
+    messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
+    corsi = Corso.query.join(Materia).join(User).all()
+    query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+    impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
+    query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+    lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
+    return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
+                           lezioni=lezioni, logged=logged)
 
 
 @app.route('/informazioni')
@@ -336,364 +357,332 @@ def page_informazioni():
 
 
 @app.route('/message_add', methods=['GET', 'POST'])
+@login_or_403
 def page_message_add():
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
         abort(403)
+    if request.method == "GET":
+        return render_template("Message/add.htm", utente=utente)
     else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        if request.method == "GET":
-            return render_template("Message/add.htm", utente=utente)
-        else:
-            oggi = date.today()
-            nuovomessaggio = Messaggio(request.form['testo'], oggi, request.form['scelta'])
-            db.session.add(nuovomessaggio)
-            db.session.commit()
-            return redirect(url_for('page_dashboard'))
-
-
-@app.route('/message_del/<int:mid>')
-def page_message_del(mid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        messaggio = Messaggio.query.get_or_404(mid)
-        db.session.delete(messaggio)
+        oggi = date.today()
+        nuovomessaggio = Messaggio(request.form['testo'], oggi, request.form['scelta'])
+        db.session.add(nuovomessaggio)
         db.session.commit()
         return redirect(url_for('page_dashboard'))
 
 
-@app.route('/user_list')
-def page_user_list():
-    if 'username' not in session:
+@app.route('/message_del/<int:mid>')
+@login_or_403
+def page_message_del(mid):
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
         abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        utenti = User.query.all()
-        return render_template("User/list.htm", utente=utente, utenti=utenti)
+    messaggio = Messaggio.query.get_or_404(mid)
+    db.session.delete(messaggio)
+    db.session.commit()
+    return redirect(url_for('page_dashboard'))
+
+
+@app.route('/user_list')
+@login_or_403
+def page_user_list():
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
+        abort(403)
+    utenti = User.query.all()
+    return render_template("User/list.htm", utente=utente, utenti=utenti)
 
 
 @app.route('/user_changepw/<int:uid>', methods=['GET', 'POST'])
+@login_or_403
 def page_user_changepw(uid):
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
+        abort(403)
+    if request.method == "GET":
+        entita = User.query.get_or_404(uid)
+        return render_template("User/changepw.htm", utente=utente, entita=entita)
+    else:
+        stringa = "L'utente " + utente.username + " ha cambiato la password a " + str(uid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        entita = User.query.get_or_404(uid)
+        p = bytes(request.form["password"], encoding="utf-8")
+        cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+        entita.passwd = cenere
+        db.session.commit()
+        return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
+@login_or_403
+def page_user_ascend(uid):
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
         abort(403)
     else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        if request.method == "GET":
-            entita = User.query.get_or_404(uid)
-            return render_template("User/changepw.htm", utente=utente, entita=entita)
+        stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        entita = User.query.get_or_404(uid)
+        if request.method == 'GET' and entita.tipo == 0:
+            materie = Materia.query.all()
+            return render_template("User/ascend.htm", utente=utente, entita=entita, materie=materie)
+        elif entita.tipo == 1:
+            entita.tipo = 0
+            for materia in entita.materie:
+                db.session.delete(materia)
+            db.session.commit()
+            return redirect(url_for('page_user_list'))
         else:
-            stringa = "L'utente " + utente.username + " ha cambiato la password a " + str(uid)
+            materie = list()
+            while True:
+                materiestring = 'materia{}'.format(len(materie))
+                if materiestring in request.form:
+                    materie.append(request.form[materiestring])
+                else:
+                    break
+            for materia in materie:
+                nuovocompito = Abilitato(materia, entita.uid)
+                db.session.add(nuovocompito)
+            entita.tipo = 1
+            db.session.commit()
+            return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_godify/<int:uid>')
+@login_or_403
+def page_user_godify(uid):
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
+        abort(403)
+    else:
+        stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        entita = User.query.get_or_404(uid)
+        if entita.tipo == 3:
+            entita.tipo = 1
+        else:
+            entita.tipo = 3
+        db.session.commit()
+        return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_teacher/<int:uid>')
+@login_or_403
+def page_user_teacher(uid):
+    utente = find_user(session['username'])
+    if utente.tipo < 3:
+        abort(403)
+    else:
+        entita = User.query.get_or_404(uid)
+        if entita.tipo == 2:
+            corsi = Corso.query.filter_by(pid=uid).all()
+            for corso in corsi:
+                db.session.remove(corso)
+            entita.tipo = 0
+        else:
+            entita.tipo = 2
+        db.session.commit()
+        return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_del/<int:uid>')
+@login_or_403
+def page_user_del(uid):
+    utente = find_user(session['username'])
+    if utente.tipo != 3:
+        abort(403)
+    else:
+        stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        entita = User.query.get_or_404(uid)
+        corsi = Corso.query.filter_by(pid=entita.uid).all()
+        for corso in corsi:
+            stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            for oggetti in corso.impegno:
+                db.session.delete(oggetti)
+            db.session.delete(corso)
+        for materia in entita.materie:
+            stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            db.session.delete(materia)
+        for compito in entita.impegno:
+            db.session.delete(compito)
+        db.session.delete(entita)
+        db.session.commit()
+        return redirect(url_for('page_user_list'))
+
+
+@app.route('/user_inspect/<int:pid>')
+@login_or_403
+def page_user_inspect(pid):
+    utente = find_user(session['username'])
+    entita = User.query.get_or_404(pid)
+    return render_template("User/inspect.htm", utente=utente, entita=entita)
+
+
+@app.route('/user_edit/<int:uid>', methods=['GET', 'POST'])
+@login_or_403
+def page_user_edit(uid):
+    utente = find_user(session['username'])
+    if utente.uid != uid:
+        abort(403)
+    else:
+        if request.method == 'GET':
+            entita = User.query.get_or_404(uid)
+            return render_template("User/edit.htm", utente=utente, entita=entita)
+        else:
+            stringa = "L'utente " + utente.username + " ha modificato il proprio profilo"
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
             p = bytes(request.form["password"], encoding="utf-8")
             cenere = bcrypt.hashpw(p, bcrypt.gensalt())
             entita.passwd = cenere
-            db.session.commit()
-            return redirect(url_for('page_user_list'))
-
-
-@app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
-def page_user_ascend(uid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            entita = User.query.get_or_404(uid)
-            if request.method == 'GET' and entita.tipo == 0:
-                materie = Materia.query.all()
-                return render_template("User/ascend.htm", utente=utente, entita=entita, materie=materie)
-            elif entita.tipo == 1:
-                entita.tipo = 0
-                for materia in entita.materie:
-                    db.session.delete(materia)
-                db.session.commit()
-                return redirect(url_for('page_user_list'))
-            else:
-                materie = list()
-                while True:
-                    materiestring = 'materia{}'.format(len(materie))
-                    if materiestring in request.form:
-                        materie.append(request.form[materiestring])
-                    else:
-                        break
-                for materia in materie:
-                    nuovocompito = Abilitato(materia, entita.uid)
-                    db.session.add(nuovocompito)
-                entita.tipo = 1
-                db.session.commit()
-                return redirect(url_for('page_user_list'))
-
-
-@app.route('/user_godify/<int:uid>')
-def page_user_godify(uid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            entita = User.query.get_or_404(uid)
-            if entita.tipo == 3:
-                entita.tipo = 1
-            else:
-                entita.tipo = 3
-            db.session.commit()
-            return redirect(url_for('page_user_list'))
-
-
-@app.route('/user_teacher/<int:uid>')
-def page_user_teacher(uid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 3:
-            abort(403)
-        else:
-            entita = User.query.get_or_404(uid)
-            if entita.tipo == 2:
-                corsi = Corso.query.filter_by(pid=uid).all()
-                for corso in corsi:
-                    db.session.remove(corso)
-                entita.tipo = 0
-            else:
-                entita.tipo = 2
-            db.session.commit()
-            return redirect(url_for('page_user_list'))
-
-
-@app.route('/user_del/<int:uid>')
-def page_user_del(uid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo != 3:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            entita = User.query.get_or_404(uid)
-            corsi = Corso.query.filter_by(pid=entita.uid).all()
-            for corso in corsi:
-                stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                for oggetti in corso.impegno:
-                    db.session.delete(oggetti)
-                db.session.delete(corso)
-            for materia in entita.materie:
-                stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                db.session.delete(materia)
-            for compito in entita.impegno:
-                db.session.delete(compito)
-            db.session.delete(entita)
-            db.session.commit()
-            return redirect(url_for('page_user_list'))
-
-
-@app.route('/user_inspect/<int:pid>')
-def page_user_inspect(pid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        entita = User.query.get_or_404(pid)
-        return render_template("User/inspect.htm", utente=utente, entita=entita)
-
-
-@app.route('/user_edit/<int:uid>', methods=['GET', 'POST'])
-def page_user_edit(uid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.uid != uid:
-            abort(403)
-        else:
-            if request.method == 'GET':
-                entita = User.query.get_or_404(uid)
-                return render_template("User/edit.htm", utente=utente, entita=entita)
-            else:
-                stringa = "L'utente " + utente.username + " ha modificato il proprio profilo"
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                entita = User.query.get_or_404(uid)
-                p = bytes(request.form["password"], encoding="utf-8")
-                cenere = bcrypt.hashpw(p, bcrypt.gensalt())
-                entita.passwd = cenere
-                entita.classe = request.form["classe"]
-                entita.telegram_username = request.form["usernameTelegram"]
-                entita.emailgenitore = request.form['mailGenitori']
-                db.session.commit()
-                return redirect(url_for('page_dashboard'))
-
-
-@app.route('/materia_add', methods=['GET', 'POST'])
-def page_materia_add():
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
-        else:
-            if request.method == 'GET':
-                return render_template("Materia/add.htm", utente=utente)
-            else:
-                stringa = "L'utente " + utente.username + " ha creato una materia "
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"],
-                                       request.form['ora'])
-                db.session.add(nuovamateria)
-                db.session.commit()
-                return redirect(url_for('page_materia_list'))
-
-
-@app.route('/materia_list')
-def page_materia_list():
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
-        else:
-            materie = Materia.query.all()
-            return render_template("Materia/list.htm", utente=utente, materie=materie)
-
-
-@app.route('/materia_edit/<int:mid>', methods=['GET', 'POST'])
-def page_materia_edit(mid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
-        else:
-            if request.method == 'GET':
-                materia = Materia.query.get_or_404(mid)
-                return render_template("Materia/edit.htm", utente=utente, materia=materia)
-            else:
-                stringa = "L'utente " + utente.username + " ha modificato la materia " + str(mid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                materia = Materia.query.get_or_404(mid)
-                materia.nome = request.form['nome']
-                materia.professore = request.form['professore']
-                materia.giorno_settimana = request.form['giorno']
-                materia.ora = request.form['ora']
-                db.session.commit()
-                return redirect(url_for('page_materia_list'))
-
-
-@app.route('/materia_del/<int:mid>')
-def page_materia_del(mid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
-        else:
-            materia = Materia.query.get_or_404(mid)
-            corsi = Corso.query.filter_by(materia_id=mid).all()
-            stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            for corso in corsi:
-                for impegni in corso.impegno:
-                    db.session.delete(impegni)
-                db.session.delete(corso)
-                stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-            db.session.delete(materia)
+            entita.classe = request.form["classe"]
+            entita.telegram_username = request.form["usernameTelegram"]
+            entita.emailgenitore = request.form['mailGenitori']
             db.session.commit()
             return redirect(url_for('page_dashboard'))
 
 
-@app.route('/corso_add', methods=['GET', 'POST'])
-def page_corso_add():
-    if 'username' not in session:
+@app.route('/materia_add', methods=['GET', 'POST'])
+@login_or_403
+def page_materia_add():
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
         abort(403)
     else:
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
+        if request.method == 'GET':
+            return render_template("Materia/add.htm", utente=utente)
         else:
-            if utente.tipo == 1:
-                if request.method == 'GET':
-                    autorizzate = Materia.query.join(Abilitato).filter_by(uid=utente.uid).join(User).all()
-                    print(autorizzate)
-                    return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
-                else:
-                    stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
-                    nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 0)
-                    db.session.add(nuovocorso)
-                    db.session.commit()
-                    return redirect(url_for('page_dashboard'))
-            elif utente.tipo == 2:
-                if request.method == 'GET':
-                    materie = Materia.query.all()
-                    return render_template("Recuperi/add.htm", utente=utente, materie=materie)
-                else:
-                    stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
-                    nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
-                    yyyy, mm, dd = request.form["data"].split("-", 2)
-                    hh, mi = request.form["ora"].split(":", 1)
-                    try:
-                        data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
-                    except ValueError:
-                        # TODO: metti un errore più carino
-                        abort(400)
-                        return
-                    nuovocorso.appuntamento = data
-                    nuovocorso.limite = request.form["massimo"]
-                    db.session.add(nuovocorso)
-                    db.session.commit()
-                    utenze = User.query.all()
-                    oggetto = Materia.query.filter_by(mid=request.form['materia'])
-                    msg = "E' stato creato un nuovo corso di " + oggetto[
-                        0].nome + "!.\nPer maggiori informazioni, collegati a Condivisione!"
-                    broadcast(msg, utenze)
-                    return redirect(url_for('page_dashboard'))
+            stringa = "L'utente " + utente.username + " ha creato una materia "
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"],
+                                   request.form['ora'])
+            db.session.add(nuovamateria)
+            db.session.commit()
+            return redirect(url_for('page_materia_list'))
+
+
+@app.route('/materia_list')
+@login_or_403
+def page_materia_list():
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
+        abort(403)
+    else:
+        materie = Materia.query.all()
+        return render_template("Materia/list.htm", utente=utente, materie=materie)
+
+
+@app.route('/materia_edit/<int:mid>', methods=['GET', 'POST'])
+@login_or_403
+def page_materia_edit(mid):
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
+        abort(403)
+    else:
+        if request.method == 'GET':
+            materia = Materia.query.get_or_404(mid)
+            return render_template("Materia/edit.htm", utente=utente, materia=materia)
+        else:
+            stringa = "L'utente " + utente.username + " ha modificato la materia " + str(mid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            materia = Materia.query.get_or_404(mid)
+            materia.nome = request.form['nome']
+            materia.professore = request.form['professore']
+            materia.giorno_settimana = request.form['giorno']
+            materia.ora = request.form['ora']
+            db.session.commit()
+            return redirect(url_for('page_materia_list'))
+
+
+@app.route('/materia_del/<int:mid>')
+@login_or_403
+def page_materia_del(mid):
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
+        abort(403)
+    else:
+        materia = Materia.query.get_or_404(mid)
+        corsi = Corso.query.filter_by(materia_id=mid).all()
+        stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        for corso in corsi:
+            for impegni in corso.impegno:
+                db.session.delete(impegni)
+            db.session.delete(corso)
+            stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+        db.session.delete(materia)
+        db.session.commit()
+        return redirect(url_for('page_dashboard'))
+
+
+@app.route('/corso_add', methods=['GET', 'POST'])
+@login_or_403
+def page_corso_add():
+    utente = find_user(session['username'])
+    if utente.tipo < 1:
+        abort(403)
+    else:
+        if utente.tipo == 1:
+            if request.method == 'GET':
+                autorizzate = Materia.query.join(Abilitato).filter_by(uid=utente.uid).join(User).all()
+                print(autorizzate)
+                return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
+            else:
+                stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
+                nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 0)
+                db.session.add(nuovocorso)
+                db.session.commit()
+                return redirect(url_for('page_dashboard'))
+        elif utente.tipo == 2:
+            if request.method == 'GET':
+                materie = Materia.query.all()
+                return render_template("Recuperi/add.htm", utente=utente, materie=materie)
+            else:
+                stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
+                nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
+                yyyy, mm, dd = request.form["data"].split("-", 2)
+                hh, mi = request.form["ora"].split(":", 1)
+                try:
+                    data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+                except ValueError:
+                    # TODO: metti un errore più carino
+                    abort(400)
+                    return
+                nuovocorso.appuntamento = data
+                nuovocorso.limite = request.form["massimo"]
+                db.session.add(nuovocorso)
+                db.session.commit()
+                utenze = User.query.all()
+                oggetto = Materia.query.filter_by(mid=request.form['materia'])
+                msg = "E' stato creato un nuovo corso di " + oggetto[
+                    0].nome + "!.\nPer maggiori informazioni, collegati a Condivisione!"
+                broadcast(msg, utenze)
+                return redirect(url_for('page_dashboard'))
 
 
 @app.route('/corso_del/<int:cid>')
+@login_or_403
 def page_corso_del(cid):
-    if 'username' not in session:
-        abort(403)
-    else:
         utente = find_user(session['username'])
         if utente.tipo < 1:
             abort(403)
@@ -715,201 +704,185 @@ def page_corso_del(cid):
 
 
 @app.route('/corso_join/<int:cid>', methods=['GET', 'POST'])
+@login_or_403
 def page_corso_join(cid):
-    if 'username' not in session:
-        abort(403)
-    else:
-        global telegramkey
-        utente = find_user(session['username'])
-        impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
-        for impegno in impegni:
-            if impegno.stud_id == utente.uid and impegno.corso_id == cid:
-                return redirect(url_for('page_dashboard'))
-        corso = Corso.query.get_or_404(cid)
-        if corso.occupati >= corso.limite:
+    global telegramkey
+    utente = find_user(session['username'])
+    impegni = Impegno.query.filter_by(stud_id=utente.uid).all()
+    for impegno in impegni:
+        if impegno.stud_id == utente.uid and impegno.corso_id == cid:
             return redirect(url_for('page_dashboard'))
-        corso.occupati = corso.occupati + 1
-        stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
-        nuovorecord = Log(stringa, datetime.today())
-        db.session.add(nuovorecord)
-        nuovoimpegno = Impegno(studente=utente,
-                               corso_id=cid, presente=False)
-        if corso.tipo != 0:
-            print(corso.materia.nome)
-            nuovoimpegno.appuntamento = corso.appuntamento
-        oggetto = "Condivisione - Iscrizione alla lezione"
-        mail = "\n\nSuo figlio si e' iscritto ad una lezione sulla piattaforma Condivisione. Per maggiori informazioni, collegarsi al sito.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
-        db.session.add(nuovoimpegno)
-        db.session.commit()
-        if sendemail(utente.emailgenitore, oggetto, mail):
-            pass
-        else:
-            abort(500)
-        if utente.telegram_chat_id:
-            testo = "Ti sei iscritto al corso di {}, che si terrà il prossimo lunedì!".format(corso.materia)
-            param = {"chat_id": utente.telegram_chat_id, "text": testo}
-            requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
-        else:
-            pass
-        insegnante = User.query.get_or_404(corso.pid)
-        if insegnante.telegram_chat_id:
-            testo = "Lo studente {} {} si è iscritto al tuo corso!".format(utente.nome, utente.cognome)
-            param = {"chat_id": utente.telegram_chat_id, "text": testo}
-            requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
-        else:
-            pass
+    corso = Corso.query.get_or_404(cid)
+    if corso.occupati >= corso.limite:
         return redirect(url_for('page_dashboard'))
+    corso.occupati = corso.occupati + 1
+    stringa = "L'utente " + utente.username + " ha chiesto di unirsi al corso " + str(cid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    nuovoimpegno = Impegno(studente=utente,
+                           corso_id=cid, presente=False)
+    if corso.tipo != 0:
+        print(corso.materia.nome)
+        nuovoimpegno.appuntamento = corso.appuntamento
+    oggetto = "Condivisione - Iscrizione alla lezione"
+    mail = "\n\nSuo figlio si e' iscritto ad una lezione sulla piattaforma Condivisione. Per maggiori informazioni, collegarsi al sito.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+    db.session.add(nuovoimpegno)
+    db.session.commit()
+    if sendemail(utente.emailgenitore, oggetto, mail):
+        pass
+    else:
+        abort(500)
+    if utente.telegram_chat_id:
+        testo = "Ti sei iscritto al corso di {}, che si terrà il prossimo lunedì!".format(corso.materia)
+        param = {"chat_id": utente.telegram_chat_id, "text": testo}
+        requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
+    else:
+        pass
+    insegnante = User.query.get_or_404(corso.pid)
+    if insegnante.telegram_chat_id:
+        testo = "Lo studente {} {} si è iscritto al tuo corso!".format(utente.nome, utente.cognome)
+        param = {"chat_id": utente.telegram_chat_id, "text": testo}
+        requests.get("https://api.telegram.org/bot" + telegramkey + "/sendMessage", params=param)
+    else:
+        pass
+    return redirect(url_for('page_dashboard'))
 
 
 @app.route('/server_log')
+@login_or_403
 def page_log_view():
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    if utente.tipo < 3:
         abort(403)
     else:
-        utente = find_user(session['username'])
-        if utente.tipo < 3:
-            abort(403)
-        else:
-            logs = Log.query.order_by(Log.ora.desc()).all()
-            return render_template("logs.htm", logs=logs, utente=utente)
+        logs = Log.query.order_by(Log.ora.desc()).all()
+        return render_template("logs.htm", logs=logs, utente=utente)
 
 
 @app.route('/corso_membri/<int:cid>')
+@login_or_403
 def corso_membri(cid):
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    if utente.tipo < 1:
         abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
-        query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
-        utenti = db.session.execute(query, {"x": cid}).fetchall()
-        return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
+    query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+    utenti = db.session.execute(query, {"x": cid}).fetchall()
+    return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
 
 
 @app.route('/presenza/<int:uid>/<int:cid>')
+@login_or_403
 def page_presenza(uid, cid):
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    lezione = Corso.query.get(cid)
+    if utente.tipo < 1 or utente.uid != lezione.pid:
         abort(403)
     else:
-        utente = find_user(session['username'])
-        lezione = Corso.query.get(cid)
-        if utente.tipo < 1 or utente.uid != lezione.pid:
-            abort(403)
+        impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
+        if impegno.presente:
+            impegno.presente = False
         else:
-            impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
-            if impegno.presente:
-                impegno.presente = False
-            else:
-                impegno.presente = True
-            db.session.commit()
-            return redirect(url_for('corso_membri', cid=cid))
+            impegno.presente = True
+        db.session.commit()
+        return redirect(url_for('corso_membri', cid=cid))
 
 
 @app.route('/impegno_del/<int:uid>/<int:cid>')
+@login_or_403
 def page_impegno_del(uid, cid):
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    lezione = Corso.query.get(cid)
+    if utente.tipo < 1 or utente.uid != lezione.pid:
         abort(403)
     else:
-        utente = find_user(session['username'])
-        lezione = Corso.query.get(cid)
-        if utente.tipo < 1 or utente.uid != lezione.pid:
-            abort(403)
-        else:
-            impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
-            lezione.occupati = lezione.occupati - 1
-            db.session.delete(impegno)
-            db.session.commit()
-            return redirect(url_for('corso_membri', cid=cid))
+        impegno = Impegno.query.filter_by(stud_id=uid, corso_id=cid).first()
+        lezione.occupati = lezione.occupati - 1
+        db.session.delete(impegno)
+        db.session.commit()
+        return redirect(url_for('corso_membri', cid=cid))
 
 
 @app.route('/inizialezione/<int:cid>')
+@login_or_403
 def page_inizia(cid):
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    lezione = Corso.query.get_or_404(cid)
+    if utente.tipo < 1 or utente.uid != lezione.pid:
+        abort(403)
+    query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+    utenti = db.session.execute(query, {"x": cid}).fetchall()
+    for utente2 in utenti:
+        if utente2[9]:
+            oggetto = "Condivisione - Partecipazione alla lezione"
+            mail = "\n\nSuo figlio e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+            sendemail(utente2[12], oggetto, mail)
+        else:
+            oggetto = "Condivisione - Assenza alla lezione"
+            mail = "\n\nSuo figlio non e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
+            sendemail(utente2[12], oggetto, mail)
+    stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    corso = Corso.query.get_or_404(cid)
+    impegni = Impegno.query.all()
+    for impegno in impegni:
+        if impegno.corso_id == cid:
+            db.session.delete(impegno)
+            stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+    db.session.delete(corso)
+    db.session.commit()
+    return redirect(url_for('page_dashboard'))
+
+
+@app.route('/ricerca', methods=["GET", "POST"])
+@login_or_403
+def page_ricerca():
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
         abort(403)
     else:
-        utente = find_user(session['username'])
-        lezione = Corso.query.get_or_404(cid)
-        if utente.tipo < 1 or utente.uid != lezione.pid:
-            abort(403)
-        query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
-        utenti = db.session.execute(query, {"x": cid}).fetchall()
-        for utente2 in utenti:
-            if utente2[9]:
-                oggetto = "Condivisione - Partecipazione alla lezione"
-                mail = "\n\nSuo figlio e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
-                sendemail(utente2[12], oggetto, mail)
-            else:
-                oggetto = "Condivisione - Assenza alla lezione"
-                mail = "\n\nSuo figlio non e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
-                sendemail(utente2[12], oggetto, mail)
-        stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
-        nuovorecord = Log(stringa, datetime.today())
-        db.session.add(nuovorecord)
-        corso = Corso.query.get_or_404(cid)
-        impegni = Impegno.query.all()
-        for impegno in impegni:
-            if impegno.corso_id == cid:
-                db.session.delete(impegno)
-                stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-        db.session.delete(corso)
-        db.session.commit()
-        return redirect(url_for('page_dashboard'))
-
-
-@app.route('/ricerca', methods=["GET", "POST"])  # Funzione scritta da Stefano Pigozzi nel progetto Estus
-def page_ricerca():
-    if 'username' not in session:
-        return abort(403)
-    else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
+        if request.method == 'GET':
+            return render_template("query.htm", pagetype="query")
         else:
-            if request.method == 'GET':
-                return render_template("query.htm", pagetype="query")
-            else:
-                try:
-                    result = db.engine.execute("SELECT " + request.form["query"] + ";")
-                except Exception as e:
-                    return render_template("query.htm", query=request.form["query"], error=repr(e), pagetype="query")
-                return render_template("query.htm", query=request.form["query"], result=result,
-                                       pagetype="query")
+            try:
+                result = db.engine.execute("SELECT " + request.form["query"] + ";")
+            except Exception as e:
+                return render_template("query.htm", query=request.form["query"], error=repr(e), pagetype="query")
+            return render_template("query.htm", query=request.form["query"], result=result,
+                                   pagetype="query")
 
 
 @app.route('/brasatura/<int:mode>', methods=["GET"])
+@login_or_403
 def page_brasatura(mode):
-    if 'username' not in session:
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
         return abort(403)
     else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            return abort(403)
-        else:
-            if mode == 1:
-                return render_template("brasatura.htm")
-            elif mode == 2:
-                utenti = User.query.filter_by(tipo=0).all()
-                dstring = ""
-                for utente in utenti:
-                    stringa = "L'utente " + utente.username + " ha BRASATO l'utente " + str(utente.uid)
-                    dstring = dstring+utente.username+";"
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
-                    for compito in utente.impegno:
-                        db.session.delete(compito)
-                    if brasamail == "si":
-                        res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
-                        if not res:
-                            print("Errore Invio ad indirizzo primario.")
-                            sendemail(utente.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
-                    db.session.delete(utente)
-                    db.session.commit()
-                dump = open("maildump.csv", 'w')
-                dump.write(dstring)
-                return redirect(url_for('page_dashboard'))
+        if mode == 1:
+            return render_template("brasatura.htm")
+        elif mode == 2:
+            utenti = User.query.filter_by(tipo=0).all()
+            dstring = ""
+            for utente in utenti:
+                stringa = "L'utente " + utente.username + " ha BRASATO l'utente " + str(utente.uid)
+                dstring = dstring+utente.username+";"
+                nuovorecord = Log(stringa, datetime.today())
+                db.session.add(nuovorecord)
+                for compito in utente.impegno:
+                    db.session.delete(compito)
+                if brasamail == "si":
+                    res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                    if not res:
+                        print("Errore Invio ad indirizzo primario.")
+                        sendemail(utente.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                db.session.delete(utente)
+                db.session.commit()
+            dump = open("maildump.csv", 'w')
+            dump.write(dstring)
+            return redirect(url_for('page_dashboard'))
 
 
 def thread():
@@ -920,18 +893,16 @@ def thread():
 
 
 @app.route('/botStart')
+@login_or_403
 def page_bot():
-    if 'username' not in session:
-        return abort(403)
+    utente = find_user(session['username'])
+    if utente.tipo < 2:
+        abort(403)
     else:
-        utente = find_user(session['username'])
-        if utente.tipo < 2:
-            abort(403)
-        else:
-            processo = threading.Thread(target=thread)
-            processo.start()
-            print("Bot Telegram avviato. API in ascolto.")
-            return "Successo!"
+        processo = threading.Thread(target=thread)
+        processo.start()
+        print("Bot Telegram avviato. API in ascolto.")
+        return "Successo!"
 
 
 # Bot
