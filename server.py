@@ -5,7 +5,6 @@ import bcrypt
 import smtplib
 from datetime import datetime, date
 import functools
-import os
 import telepot
 import threading
 import requests
