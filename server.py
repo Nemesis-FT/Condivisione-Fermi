@@ -1017,7 +1017,7 @@ if __name__ == "__main__":
     # Aggiungi sempre le tabelle non esistenti al database, senza cancellare quelle vecchie
     db.create_all()
     nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.",
-                     datetime.today())
+                     datetime.now())
     print("Bot di Telegram avviato!")
     db.session.add(nuovrecord)
     db.session.commit()
