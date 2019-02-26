@@ -279,12 +279,10 @@ def page_500(_):
 
 
 @app.route('/')
+@login_or_redirect
 def page_home():
-    if 'username' not in session:
-        return redirect(url_for('page_login'))
-    else:
-        session.pop('username')
-        return redirect(url_for('page_login'))
+    del session['username']
+    return redirect(url_for('page_login'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
