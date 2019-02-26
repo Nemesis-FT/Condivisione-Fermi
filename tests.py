@@ -1,5 +1,6 @@
 import pytest
 import server
+import random
 
 
 @pytest.fixture
@@ -23,3 +24,8 @@ def test_login_page(app):
     assert res.status_code == 400
     res = app.post("/login")
     assert res.status_code == 400
+    res = app.post("/login", data={
+        "username": str(random.random()),
+        "password": str(random.random())
+    })
+    assert res.status_code == 403
