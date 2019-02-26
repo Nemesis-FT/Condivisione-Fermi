@@ -1014,10 +1014,8 @@ def accedi(chat_id, username):
 
 
 if __name__ == "__main__":
-    # Se non esiste il database viene creato
-    if not os.path.isfile("db.sqlite"):
-        db.create_all()
-        db.session.commit()
+    # Aggiungi sempre le tabelle non esistenti al database, senza cancellare quelle vecchie
+    db.create_all()
     nuovrecord = Log("Condivisione avviato. Condivisione è un programma di FermiTech Softworks.",
                      datetime.today())
     print("Bot di Telegram avviato!")
