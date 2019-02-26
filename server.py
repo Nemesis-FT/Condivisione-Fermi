@@ -315,7 +315,7 @@ def page_register():
 
 @app.route('/dashboard')
 def page_dashboard():
-    if 'username' not in session or 'username' is None:
+    if not session.get("username"):
         return redirect(url_for('page_login'))
     else:
         logged = len(session)
