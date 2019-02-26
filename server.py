@@ -326,7 +326,6 @@ def page_dashboard():
         impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
         query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
         lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
-        db.session.commit()
         return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
                                lezioni=lezioni, logged=logged)
 
