@@ -7,6 +7,7 @@ from datetime import datetime, date
 import functools
 import telepot
 import threading
+import enum
 import requests
 from telepot.loop import MessageLoop
 from raven.contrib.flask import Sentry
@@ -179,6 +180,12 @@ class CaptchaForm(FlaskForm):
     recaptcha = RecaptchaField()
 
 
+class TipoUtente(enum.IntEnum):
+    STUDENTE = 0
+    PEER = 1
+    PROF = 2
+    ADMIN = 3
+
 # Funzioni
 
 
@@ -336,9 +343,9 @@ def page_register():
         p = bytes(request.form["password"], encoding="utf-8")
         cenere = bcrypt.hashpw(p, bcrypt.gensalt())
         utenti = User.query.all()
-        valore = 0
+        valore = TipoUtente.STUDENTE
         if len(utenti) == 0:
-            valore = 3
+            valore = TipoUtente.ADMIN
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
                          request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
         stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione."
@@ -370,7 +377,7 @@ def page_informazioni():
 
 
 @app.route('/message_add', methods=['GET', 'POST'])
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_message_add(utente):
     if request.method == "GET":
         return render_template("Message/add.htm", utente=utente)
@@ -383,7 +390,7 @@ def page_message_add(utente):
 
 
 @app.route('/message_del/<int:mid>')
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_message_del(mid, utente):
     messaggio = Messaggio.query.get_or_404(mid)
     db.session.delete(messaggio)
@@ -392,14 +399,14 @@ def page_message_del(mid, utente):
 
 
 @app.route('/user_list')
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_user_list(utente):
     utenti = User.query.all()
     return render_template("User/list.htm", utente=utente, utenti=utenti)
 
 
 @app.route('/user_changepw/<int:uid>', methods=['GET', 'POST'])
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_user_changepw(uid, utente):
     if request.method == "GET":
         entita = User.query.get_or_404(uid)
@@ -417,7 +424,7 @@ def page_user_changepw(uid, utente):
 
 
 @app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_user_ascend(uid, utente):
     utente = find_user(session['username'])
     stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
@@ -450,7 +457,7 @@ def page_user_ascend(uid, utente):
 
 
 @app.route('/user_godify/<int:uid>')
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_user_godify(uid, utente):
     stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
     nuovorecord = Log(stringa, datetime.today())
@@ -465,7 +472,7 @@ def page_user_godify(uid, utente):
 
 
 @app.route('/user_teacher/<int:uid>')
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_user_teacher(uid, utente):
     entita = User.query.get_or_404(uid)
     if entita.tipo == 2:
@@ -480,7 +487,7 @@ def page_user_teacher(uid, utente):
 
 
 @app.route('/user_del/<int:uid>')
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_user_del(uid, utente):
     stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
     nuovorecord = Log(stringa, datetime.today())
@@ -540,7 +547,7 @@ def page_user_edit(uid):
 
 
 @app.route('/materia_add', methods=['GET', 'POST'])
-@rank_or_403(2)
+@rank_or_403(TipoUtente.PROF)
 def page_materia_add(utente):
     if request.method == 'GET':
         return render_template("Materia/add.htm", utente=utente)
@@ -556,14 +563,14 @@ def page_materia_add(utente):
 
 
 @app.route('/materia_list')
-@rank_or_403(2)
+@rank_or_403(TipoUtente.PROF)
 def page_materia_list(utente):
     materie = Materia.query.all()
     return render_template("Materia/list.htm", utente=utente, materie=materie)
 
 
 @app.route('/materia_edit/<int:mid>', methods=['GET', 'POST'])
-@rank_or_403(2)
+@rank_or_403(TipoUtente.PROF)
 def page_materia_edit(mid, utente):
     if request.method == 'GET':
         materia = Materia.query.get_or_404(mid)
@@ -582,7 +589,7 @@ def page_materia_edit(mid, utente):
 
 
 @app.route('/materia_del/<int:mid>')
-@rank_or_403(2)
+@rank_or_403(TipoUtente.PROF)
 def page_materia_del(mid, utente):
     materia = Materia.query.get_or_404(mid)
     corsi = Corso.query.filter_by(materia_id=mid).all()
@@ -602,7 +609,7 @@ def page_materia_del(mid, utente):
 
 
 @app.route('/corso_add', methods=['GET', 'POST'])
-@rank_or_403(1)
+@rank_or_403(TipoUtente.PEER)
 def page_corso_add(utente):
     if utente.tipo == 1:
         if request.method == 'GET':
@@ -647,7 +654,7 @@ def page_corso_add(utente):
 
 
 @app.route('/corso_del/<int:cid>')
-@rank_or_403(1)
+@rank_or_403(TipoUtente.PEER)
 def page_corso_del(cid, utente):
     stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
     nuovorecord = Log(stringa, datetime.today())
@@ -711,14 +718,14 @@ def page_corso_join(cid):
 
 
 @app.route('/server_log')
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_log_view(utente):
     logs = Log.query.order_by(Log.ora.desc()).all()
     return render_template("logs.htm", logs=logs, utente=utente)
 
 
 @app.route('/corso_membri/<int:cid>')
-@rank_or_403(1)
+@rank_or_403(TipoUtente.PEER)
 def corso_membri(cid, utente):
     query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
     utenti = db.session.execute(query, {"x": cid}).fetchall()
@@ -792,7 +799,7 @@ def page_inizia(cid):
 
 
 @app.route('/ricerca', methods=["GET", "POST"])
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_ricerca(utente):
     if request.method == 'GET':
         return render_template("query.htm", pagetype="query")
@@ -806,7 +813,7 @@ def page_ricerca(utente):
 
 
 @app.route('/brasatura/<int:mode>', methods=["GET"])
-@rank_or_403(3)
+@rank_or_403(TipoUtente.ADMIN)
 def page_brasatura(mode):
     if mode == 1:
         return render_template("brasatura.htm")
@@ -840,7 +847,7 @@ def thread():
 
 
 @app.route('/botStart')
-@rank_or_403(2)
+@rank_or_403(TipoUtente.PROF)
 def page_bot():
     processo = threading.Thread(target=thread)
     processo.start()
