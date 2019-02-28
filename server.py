@@ -308,7 +308,7 @@ def page_register():
         form = CaptchaForm()
         return render_template("User/add.htm", captcha=form)
     else:
-        if not request.form.get('g-recaptcha-response'):
+        if RECAPTCHA_PUBLIC_KEY or RECAPTCHA_PRIVATE_KEY and not request.form.get('g-recaptcha-response'):
             abort(403)
             return
         # Validate CAPTCHA, or assume any captcha is valid while testing
