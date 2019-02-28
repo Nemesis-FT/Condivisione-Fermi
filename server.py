@@ -326,7 +326,7 @@ def page_register():
             valore = 3
         nuovouser = User(request.form['username'], cenere, request.form['nome'], request.form['cognome'],
                          request.form['classe'], valore, request.form['usernameTelegram'], request.form['mailGenitori'])
-        stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione"
+        stringa = "L'utente " + nuovouser.username + " si è iscritto a Condivisione."
         nuovorecord = Log(stringa, datetime.now())
         db.session.add(nuovorecord)
         db.session.add(nuovouser)
