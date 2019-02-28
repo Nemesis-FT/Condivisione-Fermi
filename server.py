@@ -250,6 +250,21 @@ def login_or_403(f):
     return func
 
 
+def rank_or_403(minimum):
+    """Richiedi che l'utente loggato sia del tipo specificato o superiore, oppure restituisci un errore 403.
+    Implica @login_or_403."""
+    def decorator(f):
+        @functools.wraps(f)
+        @login_or_403
+        def func(*args, **kwargs):
+            utente = find_user(session['username'])
+            if utente.tipo < minimum:
+                abort(403)
+                return
+            return f(*args, utente=utente, **kwargs)
+        return func
+    return decorator
+
 # Gestori Errori
 
 
@@ -355,11 +370,8 @@ def page_informazioni():
 
 
 @app.route('/message_add', methods=['GET', 'POST'])
-@login_or_403
-def page_message_add():
-    utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
+@rank_or_403(3)
+def page_message_add(utente):
     if request.method == "GET":
         return render_template("Message/add.htm", utente=utente)
     else:
@@ -371,11 +383,8 @@ def page_message_add():
 
 
 @app.route('/message_del/<int:mid>')
-@login_or_403
-def page_message_del(mid):
-    utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
+@rank_or_403(3)
+def page_message_del(mid, utente):
     messaggio = Messaggio.query.get_or_404(mid)
     db.session.delete(messaggio)
     db.session.commit()
@@ -383,21 +392,15 @@ def page_message_del(mid):
 
 
 @app.route('/user_list')
-@login_or_403
-def page_user_list():
-    utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
+@rank_or_403(3)
+def page_user_list(utente):
     utenti = User.query.all()
     return render_template("User/list.htm", utente=utente, utenti=utenti)
 
 
 @app.route('/user_changepw/<int:uid>', methods=['GET', 'POST'])
-@login_or_403
-def page_user_changepw(uid):
-    utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
+@rank_or_403(3)
+def page_user_changepw(uid, utente):
     if request.method == "GET":
         entita = User.query.get_or_404(uid)
         return render_template("User/changepw.htm", utente=utente, entita=entita)
@@ -414,108 +417,93 @@ def page_user_changepw(uid):
 
 
 @app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
-@login_or_403
-def page_user_ascend(uid):
+@rank_or_403(3)
+def page_user_ascend(uid, utente):
     utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
+    stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    entita = User.query.get_or_404(uid)
+    if request.method == 'GET' and entita.tipo == 0:
+        materie = Materia.query.all()
+        return render_template("User/ascend.htm", utente=utente, entita=entita, materie=materie)
+    elif entita.tipo == 1:
+        entita.tipo = 0
+        for materia in entita.materie:
+            db.session.delete(materia)
+        db.session.commit()
+        return redirect(url_for('page_user_list'))
     else:
-        stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
-        nuovorecord = Log(stringa, datetime.today())
-        db.session.add(nuovorecord)
-        entita = User.query.get_or_404(uid)
-        if request.method == 'GET' and entita.tipo == 0:
-            materie = Materia.query.all()
-            return render_template("User/ascend.htm", utente=utente, entita=entita, materie=materie)
-        elif entita.tipo == 1:
-            entita.tipo = 0
-            for materia in entita.materie:
-                db.session.delete(materia)
-            db.session.commit()
-            return redirect(url_for('page_user_list'))
-        else:
-            materie = list()
-            while True:
-                materiestring = 'materia{}'.format(len(materie))
-                if materiestring in request.form:
-                    materie.append(request.form[materiestring])
-                else:
-                    break
-            for materia in materie:
-                nuovocompito = Abilitato(materia, entita.uid)
-                db.session.add(nuovocompito)
-            entita.tipo = 1
-            db.session.commit()
-            return redirect(url_for('page_user_list'))
+        materie = list()
+        while True:
+            materiestring = 'materia{}'.format(len(materie))
+            if materiestring in request.form:
+                materie.append(request.form[materiestring])
+            else:
+                break
+        for materia in materie:
+            nuovocompito = Abilitato(materia, entita.uid)
+            db.session.add(nuovocompito)
+        entita.tipo = 1
+        db.session.commit()
+        return redirect(url_for('page_user_list'))
 
 
 @app.route('/user_godify/<int:uid>')
-@login_or_403
-def page_user_godify(uid):
-    utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
+@rank_or_403(3)
+def page_user_godify(uid, utente):
+    stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    entita = User.query.get_or_404(uid)
+    if entita.tipo == 3:
+        entita.tipo = 1
     else:
-        stringa = "L'utente " + utente.username + " ha reso ADMIN l'utente " + str(uid)
-        nuovorecord = Log(stringa, datetime.today())
-        db.session.add(nuovorecord)
-        entita = User.query.get_or_404(uid)
-        if entita.tipo == 3:
-            entita.tipo = 1
-        else:
-            entita.tipo = 3
-        db.session.commit()
-        return redirect(url_for('page_user_list'))
+        entita.tipo = 3
+    db.session.commit()
+    return redirect(url_for('page_user_list'))
 
 
 @app.route('/user_teacher/<int:uid>')
-@login_or_403
-def page_user_teacher(uid):
-    utente = find_user(session['username'])
-    if utente.tipo < 3:
-        abort(403)
+@rank_or_403(3)
+def page_user_teacher(uid, utente):
+    entita = User.query.get_or_404(uid)
+    if entita.tipo == 2:
+        corsi = Corso.query.filter_by(pid=uid).all()
+        for corso in corsi:
+            db.session.remove(corso)
+        entita.tipo = 0
     else:
-        entita = User.query.get_or_404(uid)
-        if entita.tipo == 2:
-            corsi = Corso.query.filter_by(pid=uid).all()
-            for corso in corsi:
-                db.session.remove(corso)
-            entita.tipo = 0
-        else:
-            entita.tipo = 2
-        db.session.commit()
-        return redirect(url_for('page_user_list'))
+        entita.tipo = 2
+    db.session.commit()
+    return redirect(url_for('page_user_list'))
 
 
 @app.route('/user_del/<int:uid>')
-@login_or_403
-def page_user_del(uid):
-    utente = find_user(session['username'])
-    if utente.tipo != 3:
-        abort(403)
-    else:
-        stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
+@rank_or_403(3)
+def page_user_del(uid, utente):
+    stringa = "L'utente " + utente.username + " ha ELIMINATO l'utente " + str(uid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    entita = User.query.get_or_404(uid)
+    corsi = Corso.query.filter_by(pid=entita.uid).all()
+    for corso in corsi:
+        stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
-        entita = User.query.get_or_404(uid)
-        corsi = Corso.query.filter_by(pid=entita.uid).all()
-        for corso in corsi:
-            stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            for oggetti in corso.impegno:
-                db.session.delete(oggetti)
-            db.session.delete(corso)
-        for materia in entita.materie:
-            stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            db.session.delete(materia)
-        for compito in entita.impegno:
-            db.session.delete(compito)
-        db.session.delete(entita)
-        db.session.commit()
-        return redirect(url_for('page_user_list'))
+        for oggetti in corso.impegno:
+            db.session.delete(oggetti)
+        db.session.delete(corso)
+    for materia in entita.materie:
+        stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(materia.mid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        db.session.delete(materia)
+    for compito in entita.impegno:
+        db.session.delete(compito)
+    db.session.delete(entita)
+    db.session.commit()
+    return redirect(url_for('page_user_list'))
 
 
 @app.route('/user_inspect/<int:pid>')
@@ -552,153 +540,129 @@ def page_user_edit(uid):
 
 
 @app.route('/materia_add', methods=['GET', 'POST'])
-@login_or_403
-def page_materia_add():
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        abort(403)
+@rank_or_403(2)
+def page_materia_add(utente):
+    if request.method == 'GET':
+        return render_template("Materia/add.htm", utente=utente)
     else:
-        if request.method == 'GET':
-            return render_template("Materia/add.htm", utente=utente)
-        else:
-            stringa = "L'utente " + utente.username + " ha creato una materia "
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"],
-                                   request.form['ora'])
-            db.session.add(nuovamateria)
-            db.session.commit()
-            return redirect(url_for('page_materia_list'))
+        stringa = "L'utente " + utente.username + " ha creato una materia "
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        nuovamateria = Materia(request.form["nome"], request.form["professore"], request.form["giorno"],
+                               request.form['ora'])
+        db.session.add(nuovamateria)
+        db.session.commit()
+        return redirect(url_for('page_materia_list'))
 
 
 @app.route('/materia_list')
-@login_or_403
-def page_materia_list():
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        abort(403)
-    else:
-        materie = Materia.query.all()
-        return render_template("Materia/list.htm", utente=utente, materie=materie)
+@rank_or_403(2)
+def page_materia_list(utente):
+    materie = Materia.query.all()
+    return render_template("Materia/list.htm", utente=utente, materie=materie)
 
 
 @app.route('/materia_edit/<int:mid>', methods=['GET', 'POST'])
-@login_or_403
-def page_materia_edit(mid):
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        abort(403)
+@rank_or_403(2)
+def page_materia_edit(mid, utente):
+    if request.method == 'GET':
+        materia = Materia.query.get_or_404(mid)
+        return render_template("Materia/edit.htm", utente=utente, materia=materia)
     else:
-        if request.method == 'GET':
-            materia = Materia.query.get_or_404(mid)
-            return render_template("Materia/edit.htm", utente=utente, materia=materia)
-        else:
-            stringa = "L'utente " + utente.username + " ha modificato la materia " + str(mid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-            materia = Materia.query.get_or_404(mid)
-            materia.nome = request.form['nome']
-            materia.professore = request.form['professore']
-            materia.giorno_settimana = request.form['giorno']
-            materia.ora = request.form['ora']
-            db.session.commit()
-            return redirect(url_for('page_materia_list'))
+        stringa = "L'utente " + utente.username + " ha modificato la materia " + str(mid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
+        materia = Materia.query.get_or_404(mid)
+        materia.nome = request.form['nome']
+        materia.professore = request.form['professore']
+        materia.giorno_settimana = request.form['giorno']
+        materia.ora = request.form['ora']
+        db.session.commit()
+        return redirect(url_for('page_materia_list'))
 
 
 @app.route('/materia_del/<int:mid>')
-@login_or_403
-def page_materia_del(mid):
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        abort(403)
-    else:
-        materia = Materia.query.get_or_404(mid)
-        corsi = Corso.query.filter_by(materia_id=mid).all()
-        stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
+@rank_or_403(2)
+def page_materia_del(mid, utente):
+    materia = Materia.query.get_or_404(mid)
+    corsi = Corso.query.filter_by(materia_id=mid).all()
+    stringa = "L'utente " + utente.username + " ha ELIMINATO la materia " + str(mid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    for corso in corsi:
+        for impegni in corso.impegno:
+            db.session.delete(impegni)
+        db.session.delete(corso)
+        stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
         nuovorecord = Log(stringa, datetime.today())
         db.session.add(nuovorecord)
-        for corso in corsi:
-            for impegni in corso.impegno:
-                db.session.delete(impegni)
-            db.session.delete(corso)
-            stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(corso.cid)
-            nuovorecord = Log(stringa, datetime.today())
-            db.session.add(nuovorecord)
-        db.session.delete(materia)
-        db.session.commit()
-        return redirect(url_for('page_dashboard'))
+    db.session.delete(materia)
+    db.session.commit()
+    return redirect(url_for('page_dashboard'))
 
 
 @app.route('/corso_add', methods=['GET', 'POST'])
-@login_or_403
-def page_corso_add():
-    utente = find_user(session['username'])
-    if utente.tipo < 1:
-        abort(403)
-    else:
-        if utente.tipo == 1:
-            if request.method == 'GET':
-                autorizzate = Materia.query.join(Abilitato).filter_by(uid=utente.uid).join(User).all()
-                print(autorizzate)
-                return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
-            else:
-                stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 0)
-                db.session.add(nuovocorso)
-                db.session.commit()
-                return redirect(url_for('page_dashboard'))
-        elif utente.tipo == 2:
-            if request.method == 'GET':
-                materie = Materia.query.all()
-                return render_template("Recuperi/add.htm", utente=utente, materie=materie)
-            else:
-                stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
-                yyyy, mm, dd = request.form["data"].split("-", 2)
-                hh, mi = request.form["ora"].split(":", 1)
-                try:
-                    data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
-                except ValueError:
-                    # TODO: metti un errore più carino
-                    abort(400)
-                    return
-                nuovocorso.appuntamento = data
-                nuovocorso.limite = request.form["massimo"]
-                db.session.add(nuovocorso)
-                db.session.commit()
-                utenze = User.query.all()
-                oggetto = Materia.query.filter_by(mid=request.form['materia'])
-                msg = "E' stato creato un nuovo corso di " + oggetto[
-                    0].nome + "!.\nPer maggiori informazioni, collegati a Condivisione!"
-                broadcast(msg, utenze)
-                return redirect(url_for('page_dashboard'))
+@rank_or_403(1)
+def page_corso_add(utente):
+    if utente.tipo == 1:
+        if request.method == 'GET':
+            autorizzate = Materia.query.join(Abilitato).filter_by(uid=utente.uid).join(User).all()
+            print(autorizzate)
+            return render_template("Corso/add.htm", utente=utente, materie=autorizzate)
+        else:
+            stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 0)
+            db.session.add(nuovocorso)
+            db.session.commit()
+            return redirect(url_for('page_dashboard'))
+    elif utente.tipo == 2:
+        if request.method == 'GET':
+            materie = Materia.query.all()
+            return render_template("Recuperi/add.htm", utente=utente, materie=materie)
+        else:
+            stringa = "L'utente " + utente.username + "ha creato un nuovo corso "
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            nuovocorso = Corso(utente.uid, request.form['argomenti'], request.form['materia'], 1)
+            yyyy, mm, dd = request.form["data"].split("-", 2)
+            hh, mi = request.form["ora"].split(":", 1)
+            try:
+                data = datetime(int(yyyy), int(mm), int(dd), int(hh), int(mi))
+            except ValueError:
+                # TODO: metti un errore più carino
+                abort(400)
+                return
+            nuovocorso.appuntamento = data
+            nuovocorso.limite = request.form["massimo"]
+            db.session.add(nuovocorso)
+            db.session.commit()
+            utenze = User.query.all()
+            oggetto = Materia.query.filter_by(mid=request.form['materia'])
+            msg = "E' stato creato un nuovo corso di " + oggetto[
+                0].nome + "!.\nPer maggiori informazioni, collegati a Condivisione!"
+            broadcast(msg, utenze)
+            return redirect(url_for('page_dashboard'))
 
 
 @app.route('/corso_del/<int:cid>')
-@login_or_403
-def page_corso_del(cid):
-        utente = find_user(session['username'])
-        if utente.tipo < 1:
-            abort(403)
-        else:
-            stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
+@rank_or_403(1)
+def page_corso_del(cid, utente):
+    stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    corso = Corso.query.get_or_404(cid)
+    impegni = Impegno.query.all()
+    for impegno in impegni:
+        if impegno.corso_id == cid:
+            db.session.delete(impegno)
+            stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
-            corso = Corso.query.get_or_404(cid)
-            impegni = Impegno.query.all()
-            for impegno in impegni:
-                if impegno.corso_id == cid:
-                    db.session.delete(impegno)
-                    stringa = "L'utente " + utente.username + " ha ELIMINATO l'impegno " + str(impegno.iid)
-                    nuovorecord = Log(stringa, datetime.today())
-                    db.session.add(nuovorecord)
-            db.session.delete(corso)
-            db.session.commit()
-            return redirect(url_for('page_dashboard'))
+    db.session.delete(corso)
+    db.session.commit()
+    return redirect(url_for('page_dashboard'))
 
 
 @app.route('/corso_join/<int:cid>', methods=['GET', 'POST'])
@@ -747,22 +711,15 @@ def page_corso_join(cid):
 
 
 @app.route('/server_log')
-@login_or_403
-def page_log_view():
-    utente = find_user(session['username'])
-    if utente.tipo < 3:
-        abort(403)
-    else:
-        logs = Log.query.order_by(Log.ora.desc()).all()
-        return render_template("logs.htm", logs=logs, utente=utente)
+@rank_or_403(3)
+def page_log_view(utente):
+    logs = Log.query.order_by(Log.ora.desc()).all()
+    return render_template("logs.htm", logs=logs, utente=utente)
 
 
 @app.route('/corso_membri/<int:cid>')
-@login_or_403
-def corso_membri(cid):
-    utente = find_user(session['username'])
-    if utente.tipo < 1:
-        abort(403)
+@rank_or_403(1)
+def corso_membri(cid, utente):
     query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
     utenti = db.session.execute(query, {"x": cid}).fetchall()
     return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
@@ -835,52 +792,44 @@ def page_inizia(cid):
 
 
 @app.route('/ricerca', methods=["GET", "POST"])
-@login_or_403
-def page_ricerca():
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        abort(403)
+@rank_or_403(3)
+def page_ricerca(utente):
+    if request.method == 'GET':
+        return render_template("query.htm", pagetype="query")
     else:
-        if request.method == 'GET':
-            return render_template("query.htm", pagetype="query")
-        else:
-            try:
-                result = db.engine.execute("SELECT " + request.form["query"] + ";")
-            except Exception as e:
-                return render_template("query.htm", query=request.form["query"], error=repr(e), pagetype="query")
-            return render_template("query.htm", query=request.form["query"], result=result,
-                                   pagetype="query")
+        try:
+            result = db.engine.execute("SELECT " + request.form["query"] + ";")
+        except Exception as e:
+            return render_template("query.htm", query=request.form["query"], error=repr(e), pagetype="query")
+        return render_template("query.htm", query=request.form["query"], result=result,
+                               pagetype="query")
 
 
 @app.route('/brasatura/<int:mode>', methods=["GET"])
-@login_or_403
+@rank_or_403(3)
 def page_brasatura(mode):
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        return abort(403)
-    else:
-        if mode == 1:
-            return render_template("brasatura.htm")
-        elif mode == 2:
-            utenti = User.query.filter_by(tipo=0).all()
-            dstring = ""
-            for utente in utenti:
-                stringa = "L'utente " + utente.username + " ha BRASATO l'utente " + str(utente.uid)
-                dstring = dstring+utente.username+";"
-                nuovorecord = Log(stringa, datetime.today())
-                db.session.add(nuovorecord)
-                for compito in utente.impegno:
-                    db.session.delete(compito)
-                if brasamail == "si":
-                    res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
-                    if not res:
-                        print("Errore Invio ad indirizzo primario.")
-                        sendemail(utente.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
-                db.session.delete(utente)
-                db.session.commit()
-            dump = open("maildump.csv", 'w')
-            dump.write(dstring)
-            return redirect(url_for('page_dashboard'))
+    if mode == 1:
+        return render_template("brasatura.htm")
+    elif mode == 2:
+        utenti = User.query.filter_by(tipo=0).all()
+        dstring = ""
+        for utente in utenti:
+            stringa = "L'utente " + utente.username + " ha BRASATO l'utente " + str(utente.uid)
+            dstring = dstring+utente.username+";"
+            nuovorecord = Log(stringa, datetime.today())
+            db.session.add(nuovorecord)
+            for compito in utente.impegno:
+                db.session.delete(compito)
+            if brasamail == "si":
+                res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                if not res:
+                    print("Errore Invio ad indirizzo primario.")
+                    sendemail(utente.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+            db.session.delete(utente)
+            db.session.commit()
+        dump = open("maildump.csv", 'w')
+        dump.write(dstring)
+        return redirect(url_for('page_dashboard'))
 
 
 def thread():
@@ -891,16 +840,12 @@ def thread():
 
 
 @app.route('/botStart')
-@login_or_403
+@rank_or_403(2)
 def page_bot():
-    utente = find_user(session['username'])
-    if utente.tipo < 2:
-        abort(403)
-    else:
-        processo = threading.Thread(target=thread)
-        processo.start()
-        print("Bot Telegram avviato. API in ascolto.")
-        return "Successo!"
+    processo = threading.Thread(target=thread)
+    processo.start()
+    print("Bot Telegram avviato. API in ascolto.")
+    return "Successo!"
 
 
 # Bot
