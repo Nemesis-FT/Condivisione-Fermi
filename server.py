@@ -308,14 +308,16 @@ def page_register():
         form = CaptchaForm()
         return render_template("User/add.htm", captcha=form)
     else:
-        if RECAPTCHA_PUBLIC_KEY or RECAPTCHA_PRIVATE_KEY and not request.form.get('g-recaptcha-response'):
-            abort(403)
-            return
-        # Validate CAPTCHA, or assume any captcha is valid while testing
-        if not Recaptcha(request.form.get('g-recaptcha-response')) and not app.config["TESTING"]:
-            # Invalid captcha
-            abort(403)
-            return
+        if not app.config["TESTING"] and RECAPTCHA_PUBLIC_KEY or RECAPTCHA_PRIVATE_KEY:
+            if not request.form.get('g-recaptcha-response'):
+                # Missing captcha
+                abort(403)
+                return
+            # Validate CAPTCHA, or assume any captcha is valid while testing
+            if not Recaptcha(request.form.get('g-recaptcha-response')):
+                # Invalid captcha
+                abort(403)
+                return
         p = bytes(request.form["password"], encoding="utf-8")
         cenere = bcrypt.hashpw(p, bcrypt.gensalt())
         utenti = User.query.all()
