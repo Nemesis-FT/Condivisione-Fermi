@@ -2,7 +2,7 @@ import pytest
 import server
 import random
 
-# NOTE: These tests should be executed in order!
+# NOTE: These tests should be executed in order AND together, or else some database-related things may not work.
 
 
 @pytest.fixture
@@ -44,9 +44,9 @@ def test_register_missing_fields(app):
 
 
 def test_register_valid(app):
-    res = app.post("/register", data={
+    admin_res = app.post("/register", data={
         "g-recaptcha-response": "sì",
-        "username": "example@example.org",
+        "username": "admin@example.org",
         "password": "password123",
         "nome": "Prova",
         "cognome": "Unoduetre",
@@ -54,7 +54,17 @@ def test_register_valid(app):
         "usernameTelegram": "@BotFather",
         "mailGenitori": "dad@example.org"
     }, follow_redirects=True)
-    assert res.status_code == 200
+    user_res = app.post("/register", data={
+        "g-recaptcha-response": "sì",
+        "username": "user@example.org",
+        "password": "password123",
+        "nome": "Prova",
+        "cognome": "Unoduetre",
+        "classe": "1A",
+        "usernameTelegram": "@BotFather",
+        "mailGenitori": "mom@example.org"
+    }, follow_redirects=True)
+    assert admin_res.status_code == 200 and user_res.status_code == 200
 
 
 def test_login_page(app):
@@ -91,16 +101,24 @@ def test_login_invalid(app):
 
 def test_login_valid(app):
     res = app.post("/login", data={
-        "username": "example@example.org",
+        "username": "user@example.org",
         "password": "password123"
     }, follow_redirects=True)
     assert res.status_code == 200
+    # TODO: Test session data changes
+
+
+@pytest.fixture
+def app_admin(app):
+    with app.session_transaction() as ses:
+        ses["username"] = "admin@example.org"
+        return app
 
 
 @pytest.fixture
 def app_user(app):
     with app.session_transaction() as ses:
-        ses["username"] = "example@example.org"
+        ses["username"] = "user@example.org"
         return app
 
 
@@ -112,3 +130,49 @@ def test_dashboard_redirect_not_loggedin(app):
 def test_dashboard_display(app_user):
     res = app_user.get("/dashboard")
     assert res.status_code == 200
+
+
+def test_informazioni_display(app):
+    res = app.get("/informazioni")
+    assert res.status_code == 200
+
+
+def test_message_add_forbidden(app_user):
+    res = app_user.get("/message_add")
+    assert res.status_code == 403
+
+
+def test_message_del_forbidden(app_user):
+    res = app_user.get("/message_del/1")
+    assert res.status_code == 403
+
+
+def test_user_list_forbidden(app_user):
+    res = app_user.get("/user_list")
+    assert res.status_code == 403
+
+
+def test_user_changepw_forbidden(app_user):
+    # Forse un utente dovrebbe essere in grado di cambiare la sua stessa password...
+    res = app_user.get("/user_changepw/1")
+    assert res.status_code == 403
+
+
+def test_user_ascend_forbidden(app_user):
+    res = app_user.get("/user_ascend/1")
+    assert res.status_code == 403
+
+
+def test_user_godify_forbidden(app_user):
+    res = app_user.get("/user_godify/1")
+    assert res.status_code == 403
+
+
+def test_user_teacher_forbidden(app_user):
+    res = app_user.get("/user_teacher/1")
+    assert res.status_code == 403
+
+
+def test_user_del_forbidden(app_user):
+    res = app_user.get("/user_del/1")
+    assert res.status_code == 403
