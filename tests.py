@@ -2,6 +2,8 @@ import pytest
 import server
 import random
 
+# NOTE: These tests should be executed in order!
+
 
 @pytest.fixture
 def app():
@@ -15,24 +17,24 @@ def app():
     return app.test_client()
 
 
-def register_page(app):
+def test_register_page(app):
     res = app.get("/register")
     assert res.status_code == 200
 
 
-def register_no_captcha(app):
+def test_register_no_captcha(app):
     res = app.post("/register")
-    assert res.status_code == 403
+    assert res.status_code == 400
 
 
-def register_only_captcha(app):
+def test_register_only_captcha(app):
     res = app.post("/register", data={
         "g-recaptcha-response": "sì"
     })
     assert res.status_code == 400
 
 
-def register_missing_fields(app):
+def test_register_missing_fields(app):
     res = app.post("/register", data={
         "g-recaptcha-response": "sì",
         "username": "ciao",
@@ -41,7 +43,7 @@ def register_missing_fields(app):
     assert res.status_code == 400
 
 
-def register_valid(app):
+def test_register_valid(app):
     res = app.post("/register", data={
         "g-recaptcha-response": "sì",
         "username": "example@example.org",
@@ -55,31 +57,31 @@ def register_valid(app):
     assert res.status_code == 200
 
 
-def login_page(app):
+def test_login_page(app):
     res = app.get("/login")
     assert res.status_code == 200
 
 
-def login_no_username(app):
+def test_login_no_username(app):
     res = app.post("/login", data={
         "password": "haha"
     })
     assert res.status_code == 400
 
 
-def login_no_password(app):
+def test_login_no_password(app):
     res = app.post("/login", data={
         "username": "sacripante"
     })
     assert res.status_code == 400
 
 
-def login_nothing(app):
+def test_login_nothing(app):
     res = app.post("/login")
     assert res.status_code == 400
 
 
-def login_invalid(app):
+def test_login_invalid(app):
     res = app.post("/login", data={
         "username": str(random.random()),
         "password": str(random.random())
@@ -87,7 +89,7 @@ def login_invalid(app):
     assert res.status_code == 403
 
 
-def login_valid(app):
+def test_login_valid(app):
     res = app.post("/login", data={
         "username": "example@example.org",
         "password": "password123"
@@ -95,13 +97,18 @@ def login_valid(app):
     assert res.status_code == 200
 
 
-def dashboard_redirect(app):
+@pytest.fixture
+def app_user(app):
+    with app.session_transaction() as ses:
+        ses["username"] = "example@example.org"
+        return app
+
+
+def test_dashboard_redirect_not_loggedin(app):
     res = app.get("/dashboard")
     assert res.status_code == 302
 
 
-def dashboard_display(app):
-    with app.session_transaction() as ses:
-        ses["username"] = "example@example.org"
-        res = app.get("/dashboard")
-        assert res.status_code == 200
+def test_dashboard_display(app_user):
+    res = app_user.get("/dashboard")
+    assert res.status_code == 200

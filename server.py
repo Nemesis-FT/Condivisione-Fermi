@@ -330,11 +330,11 @@ def page_register():
         form = CaptchaForm()
         return render_template("User/add.htm", captcha=form)
     else:
-        if not app.config["TESTING"] and RECAPTCHA_PUBLIC_KEY or RECAPTCHA_PRIVATE_KEY:
-            if not request.form.get('g-recaptcha-response'):
-                # Missing captcha
-                abort(403)
-                return
+        if not request.form.get('g-recaptcha-response'):
+            # Missing captcha
+            abort(400)
+            return
+        if not app.config["TESTING"]:
             # Validate CAPTCHA, or assume any captcha is valid while testing
             if not Recaptcha(request.form.get('g-recaptcha-response')):
                 # Invalid captcha
