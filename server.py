@@ -9,14 +9,14 @@ import telepot
 import threading
 import enum
 import requests
+import os
+import sys
 from telepot.loop import MessageLoop
 from raven.contrib.flask import Sentry
 from raven import Client
 from flask_wtf import RecaptchaField, FlaskForm, Recaptcha
 
 app = Flask(__name__)
-chiavi = open("configurazione.txt", 'r')
-dati = chiavi.readline()
 # Struttura del file di configurazione
 # Parametri separati da pipe
 # app.secret_key : chiave segreta dell'applicazione flask, mantiene i login privati
@@ -26,6 +26,19 @@ dati = chiavi.readline()
 # sentry_dsn : token per il reporting automatico degli errori a sentry.io
 # RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY : chiavi pubblica e privata di recaptcha, ottenibili da google
 # brasamail : se "si", elimina tutti gli account non privilegiati
+
+if "TOX_ENV_NAME" in os.environ and os.environ["TOX_ENV_NAME"]:
+    dati = "testing|000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|||||||no"
+elif "SITE_CONFIG" in os.environ and os.environ["SITE_CONFIG"]:
+    dati = os.environ["SITE_CONFIG"]
+else:
+    try:
+        chiavi = open("configurazione.txt", 'r')
+        dati = chiavi.readline()
+    except FileNotFoundError:
+        raise FileNotFoundError("Devi creare un file configurazione.txt o inserire la configurazione nella variabile di ambiente SITE_CONFIG perchè il sito funzioni!")
+
+
 app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
