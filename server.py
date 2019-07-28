@@ -813,25 +813,25 @@ def page_ricerca(utente):
 
 @app.route('/brasatura/<int:mode>', methods=["GET"])
 @rank_or_403(TipoUtente.ADMIN)
-def page_brasatura(mode):
+def page_brasatura(mode, utente):
     if mode == 1:
         return render_template("brasatura.htm")
     elif mode == 2:
         utenti = User.query.filter_by(tipo=0).all()
         dstring = ""
-        for utente in utenti:
-            stringa = "L'utente " + utente.username + " ha BRASATO l'utente " + str(utente.uid)
-            dstring = dstring+utente.username+";"
+        for u in utenti:
+            stringa = "L'utente " + u.username + " ha BRASATO l'utente " + str(u.uid)
+            dstring = dstring+u.username+";"
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
-            for compito in utente.impegno:
+            for compito in u.impegno:
                 db.session.delete(compito)
             if brasamail == "si":
-                res = sendemail(utente.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                res = sendemail(u.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
                 if not res:
                     print("Errore Invio ad indirizzo primario.")
-                    sendemail(utente.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
-            db.session.delete(utente)
+                    sendemail(u.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+            db.session.delete(u)
             db.session.commit()
         dump = open("maildump.csv", 'w')
         dump.write(dstring)
