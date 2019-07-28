@@ -144,3 +144,4 @@ $RECYCLE.BIN/
 configurazione.txt
 db.sqlite
 maildump.csv
+.tox/
