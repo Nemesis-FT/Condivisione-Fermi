@@ -44,7 +44,8 @@ def test_register_missing_fields(app):
 
 
 def test_register_valid(app):
-    admin_res = app.post("/register", data={
+    # 1
+    res = app.post("/register", data={
         "g-recaptcha-response": "sì",
         "username": "admin@example.org",
         "password": "password123",
@@ -54,7 +55,9 @@ def test_register_valid(app):
         "usernameTelegram": "@BotFather",
         "mailGenitori": "dad@example.org"
     }, follow_redirects=True)
-    user_res = app.post("/register", data={
+    assert res.status_code == 200
+    # 2
+    res = app.post("/register", data={
         "g-recaptcha-response": "sì",
         "username": "user@example.org",
         "password": "password123",
@@ -64,7 +67,43 @@ def test_register_valid(app):
         "usernameTelegram": "@BotFather",
         "mailGenitori": "mom@example.org"
     }, follow_redirects=True)
-    assert admin_res.status_code == 200 and user_res.status_code == 200
+    # 3
+    assert res.status_code == 200
+    res = app.post("/register", data={
+        "g-recaptcha-response": "sì",
+        "username": "peer@example.org",
+        "password": "password123",
+        "nome": "Prova",
+        "cognome": "Unoduetre",
+        "classe": "1A",
+        "usernameTelegram": "@BotFather",
+        "mailGenitori": "sas@example.org"
+    }, follow_redirects=True)
+    assert res.status_code == 200
+    # 4
+    res = app.post("/register", data={
+        "g-recaptcha-response": "sì",
+        "username": "prof@example.org",
+        "password": "password123",
+        "nome": "Prova",
+        "cognome": "Unoduetre",
+        "classe": "1A",
+        "usernameTelegram": "@BotFather",
+        "mailGenitori": "sas@example.org"
+    }, follow_redirects=True)
+    assert res.status_code == 200
+    # 5
+    res = app.post("/register", data={
+        "g-recaptcha-response": "sì",
+        "username": "new_admin@example.org",
+        "password": "password123",
+        "nome": "Prova",
+        "cognome": "Unoduetre",
+        "classe": "1A",
+        "usernameTelegram": "@BotFather",
+        "mailGenitori": "sas@example.org"
+    }, follow_redirects=True)
+    assert res.status_code == 200
 
 
 def test_login_page(app):
@@ -122,6 +161,44 @@ def app_user(app):
         return app
 
 
+def test_user_ascend_forbidden(app_user):
+    res = app_user.get("/user_ascend/1")
+    assert res.status_code == 403
+
+
+# def test_user_ascend_valid(app_admin):
+#     TODO
+
+# @pytest.fixture
+# def app_peer(app):
+#     with app.session_transaction() as ses:
+#         ses["username"] = "peer@example.org"
+#         return app
+
+
+def test_user_godify_forbidden(app_user):
+    res = app_user.get("/user_godify/1")
+    assert res.status_code == 403
+
+
+# def test_user_godify_valid(app_admin):
+#     TODO
+
+
+def test_user_teacher_forbidden(app_user):
+    res = app_user.get("/user_teacher/1")
+    assert res.status_code == 403
+
+
+# def test_user_teacher_valid(app_admin):
+#     TODO
+
+# @pytest.fixture
+# def app_prof(app):
+#     with app.session_transaction() as ses:
+#         ses["username"] = "prof@example.org"
+#         return app
+
 def test_dashboard_redirect_not_loggedin(app):
     res = app.get("/dashboard")
     assert res.status_code == 302
@@ -158,21 +235,32 @@ def test_user_changepw_forbidden(app_user):
     assert res.status_code == 403
 
 
-def test_user_ascend_forbidden(app_user):
-    res = app_user.get("/user_ascend/1")
-    assert res.status_code == 403
-
-
-def test_user_godify_forbidden(app_user):
-    res = app_user.get("/user_godify/1")
-    assert res.status_code == 403
-
-
-def test_user_teacher_forbidden(app_user):
-    res = app_user.get("/user_teacher/1")
-    assert res.status_code == 403
-
-
 def test_user_del_forbidden(app_user):
     res = app_user.get("/user_del/1")
     assert res.status_code == 403
+
+
+def test_log_view_forbidden(app_user):
+    res = app_user.get("/server_log")
+    assert res.status_code == 403
+
+
+def test_log_view_valid(app_admin):
+    res = app_admin.get("/server_log")
+    assert res.status_code == 200
+
+
+def test_brasatura_forbidden(app_user):
+    res = app_user.get("/brasatura/1")
+    assert res.status_code == 403
+    res = app_user.get("/brasatura/2")
+    assert res.status_code == 403
+
+
+# Questo dovrebbe essere l'ultimo test per motivi ovvii
+def test_brasatura_valid(app_admin):
+    res = app_admin.get("/brasatura/1")
+    assert res.status_code == 200
+    res = app_admin.get("/brasatura/2")
+    assert res.status_code == 302
+    # TODO: test if the data is actually deleted
