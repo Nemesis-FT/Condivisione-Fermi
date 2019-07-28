@@ -426,7 +426,6 @@ def page_user_changepw(uid, utente):
 @app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
 @rank_or_403(TipoUtente.ADMIN)
 def page_user_ascend(uid, utente):
-    utente = find_user(session['username'])
     stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
     nuovorecord = Log(stringa, datetime.today())
     db.session.add(nuovorecord)
