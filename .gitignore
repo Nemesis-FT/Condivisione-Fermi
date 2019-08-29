@@ -140,4 +140,8 @@ $RECYCLE.BIN/
 *.idea
 *.sqlite
 *.cfg
-*.txt
+
+configurazione.txt
+db.sqlite
+maildump.csv
+.tox/

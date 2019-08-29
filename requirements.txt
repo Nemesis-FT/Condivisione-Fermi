@@ -4,3 +4,9 @@ requests
 raven
 raven[flask]
 blinker
+flask_sqlalchemy
+flask_wtf
+flask
+sqlalchemy
+pytest
+tox

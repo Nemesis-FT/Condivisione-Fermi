@@ -1,0 +1,15 @@
+environment:
+  global:
+    SITE_CONFIG: test|000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|||||||no
+
+  matrix:
+    - TOXENV: py35
+
+
+build: false
+
+install:
+- pip install tox
+
+test_script:
+- tox
