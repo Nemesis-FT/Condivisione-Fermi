@@ -36,10 +36,12 @@ else:
         chiavi = open("configurazione.txt", 'r')
         dati = chiavi.readline()
     except FileNotFoundError:
-        raise FileNotFoundError("Devi creare un file configurazione.txt o inserire la configurazione nella variabile di ambiente SITE_CONFIG perchè il sito funzioni!")
+        raise FileNotFoundError(
+            "Devi creare un file configurazione.txt o inserire la configurazione nella variabile di ambiente SITE_CONFIG perchè il sito funzioni!")
 
-
-app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY, brasamail = dati.split("|", 8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
+app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, RECAPTCHA_PUBLIC_KEY, RECAPTCHA_PRIVATE_KEY, brasamail = dati.split(
+    "|",
+    8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -199,6 +201,7 @@ class TipoUtente(enum.IntEnum):
     PROF = 2
     ADMIN = 3
 
+
 # Funzioni
 
 
@@ -257,6 +260,7 @@ def login_or_redirect(f):
         if not session.get("username"):
             return redirect(url_for('page_login'))
         return f(*args, **kwargs)
+
     return func
 
 
@@ -267,12 +271,14 @@ def login_or_403(f):
             abort(403)
             return
         return f(*args, **kwargs)
+
     return func
 
 
 def rank_or_403(minimum):
     """Richiedi che l'utente loggato sia del tipo specificato o superiore, oppure restituisci un errore 403.
     Implica @login_or_403."""
+
     def decorator(f):
         @functools.wraps(f)
         @login_or_403
@@ -282,8 +288,11 @@ def rank_or_403(minimum):
                 abort(403)
                 return
             return f(*args, utente=utente, **kwargs)
+
         return func
+
     return decorator
+
 
 # Gestori Errori
 
@@ -376,9 +385,11 @@ def page_dashboard():
     utente = find_user(session['username'])
     messaggi = Messaggio.query.order_by(Messaggio.data.desc()).all()
     corsi = Corso.query.join(Materia).join(User).all()
-    query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+    query1 = text(
+        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
     impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-    query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+    query2 = text(
+        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
     lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
     return render_template("dashboard.htm", utente=utente, messaggi=messaggi, corsi=corsi, impegni=impegni,
                            lezioni=lezioni, logged=logged)
@@ -447,11 +458,7 @@ def page_user_ascend(uid, utente):
         materie = Materia.query.all()
         return render_template("User/ascend.htm", utente=utente, entita=entita, materie=materie)
     elif entita.tipo == 1:
-        entita.tipo = 0
-        for materia in entita.materie:
-            db.session.delete(materia)
-        db.session.commit()
-        return redirect(url_for('page_user_list'))
+        return redirect('/peer_inspect/{}'.format(entita.uid))
     else:
         materie = list()
         while True:
@@ -466,6 +473,32 @@ def page_user_ascend(uid, utente):
         entita.tipo = 1
         db.session.commit()
         return redirect(url_for('page_user_list'))
+
+
+@app.route('/peer_inspect/<int:uid>', methods=['GET', 'POST'])
+@rank_or_403(TipoUtente.ADMIN)
+def page_peer_inspect(uid, utente):
+    querylibere = text(
+        "SELECT * FROM materia WHERE materia.nome NOT IN (SELECT materia.nome FROM materia JOIN abilitazioni ON materia.mid=abilitazioni.mid JOIN user ON abilitazioni.uid=user.uid WHERE user.uid=:x)")
+    materielibere = db.session.execute(querylibere, {"x": uid}).fetchall()
+    print(materielibere)
+    if materielibere is None:
+        materielibere = [['0', 'Materia dummy', 'Segnaposto', "1", "14:30"]]
+    peer = User.query.get_or_404(uid)
+    autorizzate = Materia.query.join(Abilitato).filter_by(uid=peer.uid).join(User).all()
+    return render_template("/User/peerinspect.htm", utente=utente, materielibere=materielibere, peer=peer,
+                           autorizzate=autorizzate)
+
+
+@app.route("/peer_remove/<int:uid>")
+@rank_or_403(TipoUtente.ADMIN)
+def page_peer_remove(uid, utente):
+    entita = User.query.get_or_404(uid)
+    entita.tipo = 0
+    for materia in entita.materie:
+        db.session.delete(materia)
+    db.session.commit()
+    return redirect(url_for('page_user_list'))
 
 
 @app.route('/user_godify/<int:uid>')
@@ -739,7 +772,8 @@ def page_log_view(utente):
 @app.route('/corso_membri/<int:cid>')
 @rank_or_403(TipoUtente.PEER)
 def corso_membri(cid, utente):
-    query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+    query = text(
+        "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
     utenti = db.session.execute(query, {"x": cid}).fetchall()
     return render_template("Corso/membri.htm", utente=utente, entita=utenti, idcorso=cid)
 
@@ -783,7 +817,8 @@ def page_inizia(cid):
     lezione = Corso.query.get_or_404(cid)
     if utente.tipo < 1 or utente.uid != lezione.pid:
         abort(403)
-    query = text("SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+    query = text(
+        "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
     utenti = db.session.execute(query, {"x": cid}).fetchall()
     for utente2 in utenti:
         if utente2[9]:
@@ -834,16 +869,18 @@ def page_brasatura(mode, utente):
         dstring = ""
         for u in utenti:
             stringa = "L'utente " + u.username + " ha BRASATO l'utente " + str(u.uid)
-            dstring = dstring+u.username+";"
+            dstring = dstring + u.username + ";"
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
             for compito in u.impegno:
                 db.session.delete(compito)
             if brasamail == "si":
-                res = sendemail(u.username, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                res = sendemail(u.username, "Cancellazione utente",
+                                "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
                 if not res:
                     print("Errore Invio ad indirizzo primario.")
-                    sendemail(u.emailgenitore, "Cancellazione utente", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+                    sendemail(u.emailgenitore, "Cancellazione utente",
+                              "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
             db.session.delete(u)
             db.session.commit()
         dump = open("maildump.csv", 'w')
@@ -882,12 +919,15 @@ def handle(msg):
                 utente = utenza[0]
                 testo = msg['text']
                 if testo == "/aiuto":
-                    bot.sendMessage(chat_id, "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
+                    bot.sendMessage(chat_id,
+                                    "I comandi disponibili sono:\n/aiuto - Lista comandi\n/impegni - Lista degli impegni\n")
                 elif testo == "/impegni":
 
-                    query1 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
+                    query1 = text(
+                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati , corso.pid FROM impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE corso.pid=:x;")
                     impegni = db.session.execute(query1, {"x": utente.uid}).fetchall()
-                    query2 = text("SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
+                    query2 = text(
+                        "SELECT impegno.*, materia.nome, materia.giorno_settimana, materia.ora, impegno.appuntamento, corso.limite, corso.occupati, corso.pid FROM  impegno JOIN corso ON impegno.corso_id=corso.cid JOIN materia ON corso.materia_id = materia.mid JOIN user ON impegno.stud_id = user.uid WHERE impegno.stud_id=:x;")
                     lezioni = db.session.execute(query2, {"x": utente.uid}).fetchall()
                     messaggio = ""
                     if len(impegni) > 0:
@@ -938,9 +978,11 @@ def accedi(chat_id, username):
         utenti = User.query.filter_by(telegram_username=username).all()
         print(username)
         if not utenti:
-            bot.sendMessage(chat_id, "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
+            bot.sendMessage(chat_id,
+                            "Si è verificato un problema con l'autenticazione. Assicurati di aver impostato correttamete il tuo username su Condivisione")
         else:
-            bot.sendMessage(chat_id, "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
+            bot.sendMessage(chat_id,
+                            "Collegamento riuscito. D'ora in avanti, il bot ti avviserà ogni volta che un corso verrà creato e riepilogherà i tuoi impegni.\nPer dissociare questo account, visita Condivisione.\n\nPer visualizzare i comandi, digita /aiuto.")
             utenti[0].telegram_chat_id = chat_id
             db.session.commit()
 

@@ -1,0 +1,25 @@
+{% extends "stampo.htm" %}
+{% block title %}Verifica abilitazioni - Condivisione{% endblock %}
+{% block content %}
+    <h1>Verifica abilitazioni del peer {{ peer.nome }} {{ peer.cognome }}</h1> <br>
+    <h3>Il peer è attualmente abilitato per le seguenti materie:</h3>
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Professore</th>
+            <th>Giorno</th>
+            <th>Azioni</th>
+        </tr>
+        </thead>
+        {% for materia in autorizzate %}
+            <tr>
+                <td>{{ materia.nome }}</td>
+                <td>{{ materia.professore }}</td>
+                <td>{{ materia.giorno_settimana }}</td>
+                <td><a href="/abilitazione_delete/{{ materia.aid }}"><i class="fa fa-ban" aria-hidden="true"></i></a></td>
+            </tr>
+        {% endfor %}
+    </table>
+    <a href="/peer_remove/{{ peer.uid }}" type="button" class="btn btn-danger btn-lg btn-block">Rimuovi dalla Peer Education</a>
+{% endblock %}
