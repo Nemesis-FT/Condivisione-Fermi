@@ -450,9 +450,6 @@ def page_user_changepw(uid, utente):
 @app.route('/user_ascend/<int:uid>', methods=['GET', 'POST'])
 @rank_or_403(TipoUtente.ADMIN)
 def page_user_ascend(uid, utente):
-    stringa = "L'utente " + utente.username + " ha reso PEER (o rimosso da tale incarico) l'utente " + str(uid)
-    nuovorecord = Log(stringa, datetime.today())
-    db.session.add(nuovorecord)
     entita = User.query.get_or_404(uid)
     if request.method == 'GET' and entita.tipo == 0:
         materie = Materia.query.all()
@@ -460,6 +457,9 @@ def page_user_ascend(uid, utente):
     elif entita.tipo == 1:
         return redirect('/peer_inspect/{}'.format(entita.uid))
     else:
+        stringa = "L'utente " + utente.username + " ha reso PEER l'utente " + str(uid)
+        nuovorecord = Log(stringa, datetime.today())
+        db.session.add(nuovorecord)
         materie = list()
         while True:
             materiestring = 'materia{}'.format(len(materie))
@@ -481,7 +481,6 @@ def page_peer_inspect(uid, utente):
     querylibere = text(
         "SELECT * FROM materia WHERE materia.nome NOT IN (SELECT materia.nome FROM materia JOIN abilitazioni ON materia.mid=abilitazioni.mid JOIN user ON abilitazioni.uid=user.uid WHERE user.uid=:x)")
     materielibere = db.session.execute(querylibere, {"x": uid}).fetchall()
-    print(materielibere)
     if materielibere is None:
         materielibere = [['0', 'Materia dummy', 'Segnaposto', "1", "14:30"]]
     peer = User.query.get_or_404(uid)
@@ -489,10 +488,34 @@ def page_peer_inspect(uid, utente):
     return render_template("/User/peerinspect.htm", utente=utente, materielibere=materielibere, peer=peer,
                            autorizzate=autorizzate)
 
+@app.route('/peer_del/<int:mid>/<int:uid>')
+@rank_or_403(TipoUtente.ADMIN)
+def page_peer_del(mid, uid, utente):
+    stringa = "L'utente " + utente.username + " ha rimosso dalla peer education " + str(uid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    abilitazione = Abilitato.query.filter_by(uid=uid, mid=mid).first()
+    db.session.delete(abilitazione)
+    db.session.commit()
+    return redirect('/peer_inspect/{}'.format(abilitazione.uid))
+
+@app.route('/peer_add/<int:mid>/<int:uid>')
+@rank_or_403(TipoUtente.ADMIN)
+def page_peer_add(mid, uid, utente):
+    stringa = "L'utente " + utente.username + " ha aggiunto un abilitazione a " + str(uid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
+    nuovabi = Abilitato(mid, uid)
+    db.session.add(nuovabi)
+    db.session.commit()
+    return redirect('/peer_inspect/{}'.format(uid))
 
 @app.route("/peer_remove/<int:uid>")
 @rank_or_403(TipoUtente.ADMIN)
 def page_peer_remove(uid, utente):
+    stringa = "L'utente " + utente.username + " ha tolto un abilitazione a " + str(uid)
+    nuovorecord = Log(stringa, datetime.today())
+    db.session.add(nuovorecord)
     entita = User.query.get_or_404(uid)
     entita.tipo = 0
     for materia in entita.materie:
