@@ -479,7 +479,7 @@ def page_user_ascend(uid, utente):
 @rank_or_403(TipoUtente.ADMIN)
 def page_peer_inspect(uid, utente):
     querylibere = text(
-        "SELECT * FROM materia WHERE materia.nome NOT IN (SELECT materia.nome FROM materia JOIN abilitazioni ON materia.mid=abilitazioni.mid JOIN user ON abilitazioni.uid=user.uid WHERE user.uid=:x)")
+        "SELECT * FROM materia WHERE materia.mid NOT IN (SELECT materia.mid FROM materia JOIN abilitazioni ON materia.mid=abilitazioni.mid JOIN user ON abilitazioni.uid=user.uid WHERE user.uid=:x)")
     materielibere = db.session.execute(querylibere, {"x": uid}).fetchall()
     if materielibere is None:
         materielibere = [['0', 'Materia dummy', 'Segnaposto', "1", "14:30"]]
