@@ -911,6 +911,36 @@ def page_brasatura(mode, utente):
         return redirect(url_for('page_dashboard'))
 
 
+@app.route('/api/peer_request') # Questa funzione sarà da rimpiazzare con un sistema che permetta il caricamento da CSV
+def api_peer_request():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    if not username or not password:
+        abort(400)
+        return
+    if login(username, password):
+        richiedente = find_user(username)
+        if richiedente.tipo < 2:
+            abort(403)
+        email = request.form.get("email")
+        materie = request.form.get("materie").split(",")
+        newpeer = find_user(email)
+        if newpeer.tipo > 0:
+            abort(403)
+        for materia in materie:
+            materia_nome, richiede = materia.split("|")
+            if richiede:
+                materie_add = Materia.query.filter_by(nome=materia_nome).all()
+                for materia_singola in materie_add:
+                    nuova_abilitazione = Abilitato(materia_singola.mid, newpeer.uid)
+                    db.session.add(nuova_abilitazione)
+        newpeer.tipo = 1
+        db.session.commit()
+        abort(200)
+    else:
+        abort(403)
+
+
 def thread():
     global bot
     bot = telepot.Bot(telegramkey)
