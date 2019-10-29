@@ -929,7 +929,7 @@ def api_peer_request():
             abort(403)
         for materia in materie:
             materia_nome, richiede = materia.split("|")
-            if richiede:
+            if richiede == '1':
                 materie_add = Materia.query.filter_by(nome=materia_nome).all()
                 for materia_singola in materie_add:
                     nuova_abilitazione = Abilitato(materia_singola.mid, newpeer.uid)
