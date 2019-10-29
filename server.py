@@ -916,7 +916,7 @@ def api_peer_request():
     username = request.form.get("username")
     password = request.form.get("password")
     if not username or not password:
-        abort(400)
+        abort(403)
         return
     if login(username, password):
         richiedente = find_user(username)
