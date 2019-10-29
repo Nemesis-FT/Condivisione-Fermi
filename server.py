@@ -911,7 +911,7 @@ def page_brasatura(mode, utente):
         return redirect(url_for('page_dashboard'))
 
 
-@app.route('/api/peer_request', methods=['GET']) # Questa funzione sarà da rimpiazzare con un sistema che permetta il caricamento da CSV
+@app.route('/api/peer_request', methods=['POST']) # Questa funzione sarà da rimpiazzare con un sistema che permetta il caricamento da CSV
 def api_peer_request():
     username = request.form.get("username")
     password = request.form.get("password")
