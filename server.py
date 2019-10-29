@@ -936,7 +936,7 @@ def api_peer_request():
                     db.session.add(nuova_abilitazione)
         newpeer.tipo = 1
         db.session.commit()
-        abort(200)
+        return "200 - DATA SAVED TO DISK"
     else:
         abort(403)
 
