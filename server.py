@@ -33,7 +33,7 @@ elif "SITE_CONFIG" in os.environ and os.environ["SITE_CONFIG"]:
     dati = os.environ["SITE_CONFIG"]
 else:
     try:
-        chiavi = open("C:\\Users\\loren\\Documents\\Condivisione-Fermi\\configurazione.txt", 'r')
+        chiavi = open("./configurazione.txt", 'r')
         dati = chiavi.readline()
     except FileNotFoundError:
         raise FileNotFoundError(
