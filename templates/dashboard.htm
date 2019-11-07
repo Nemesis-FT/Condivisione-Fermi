@@ -128,7 +128,8 @@
                                 {% if utente.tipo >= 1 %}
                                     <strong><i class="fa fa-search" aria-hidden="true"></i></strong> - Esegui l'appello
                                 {% endif %}
-                                <br><strong>Nel caso in cui non si riesca a presenziare alla lezione, </strong> contattare il peer educator.
+                                <br><strong>Nel caso in cui non si riesca a presenziare alla lezione, </strong>
+                                contattare il peer educator.
                             </div>
                         </div>
                     </div>
@@ -155,14 +156,14 @@
                                 {% endif %}
                             </div>
                             <div class="alert alert-info" role="alert">
-                                <strong>Si raccomanda agli studenti di iscriversi entro Domenica</strong>, dato che le prenotazioni all'ultimo minuto non sono garantite!
+                                <strong>Si raccomanda agli studenti di iscriversi entro Domenica</strong>, dato che le
+                                prenotazioni all'ultimo minuto non sono garantite!
                             </div>
                             <table class="table table-sm">
                                 <thead>
                                 <tr>
                                     <th>Materia</th>
                                     <th>Argomenti</th>
-                                    <th>Giorno</th>
                                     <th>Stato</th>
                                     <th>Azioni</th>
                                 </tr>
@@ -172,12 +173,6 @@
                                         <tr>
                                             <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
                                             <td>{{ corso.argomenti }}</td>
-                                            <td>{% if corso.materia.giorno_settimana == 1 %}
-                                                Lunedì, {% elif corso.materia.giorno_settimana == 2 %}
-                                                Martedì, {% elif corso.materia.giorno_settimana == 3 %}
-                                                Mercoledì, {% elif corso.materia.giorno_settimana == 4 %}
-                                                Giovedì, {% elif corso.materia.giorno_settimana == 5 %}
-                                                Venerdì, {% endif %}{{ corso.materia.ora }}</td>
                                             <td>
                                                 <div class="progress">
                                                     <div {% if (corso.occupati/corso.limite)*100 < 50 %}class="progress-bar bg-success"
@@ -185,9 +180,9 @@
                                                          {% else %}class="progress-bar bg-danger" {% endif %}
                                                          role="progressbar"
                                                          style="width: {{ (corso.occupati/corso.limite)*100//1 }}%"
-                                                         aria-valuenow="{{ corso.occupati//1 }}"
+                                                         aria-valuenow="{{ (corso.occupati//1).__round__() }}"
                                                          aria-valuemin="0"
-                                                         aria-valuemax="/{{ corso.limite }}">{{ (corso.occupati/corso.limite)*100//1 }}%
+                                                         aria-valuemax="/{{ corso.limite }}">{{ ((corso.occupati/corso.limite)*100//1).__round__() }}%
                                                     </div>
                                                 </div>
                                             </td>
@@ -300,5 +295,5 @@
         </div>
     </div>
     <br>
-    <center>Versione di Condivisione R 1.20</center>
+    <center>Versione di Condivisione R 1.30</center>
 {% endblock %}

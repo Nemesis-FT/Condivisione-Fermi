@@ -33,7 +33,7 @@ elif "SITE_CONFIG" in os.environ and os.environ["SITE_CONFIG"]:
     dati = os.environ["SITE_CONFIG"]
 else:
     try:
-        chiavi = open("configurazione.txt", 'r')
+        chiavi = open("C:\\Users\\loren\\Documents\\Condivisione-Fermi\\configurazione.txt", 'r')
         dati = chiavi.readline()
     except FileNotFoundError:
         raise FileNotFoundError(
@@ -604,9 +604,10 @@ def page_user_edit(uid):
             nuovorecord = Log(stringa, datetime.today())
             db.session.add(nuovorecord)
             entita = User.query.get_or_404(uid)
-            p = bytes(request.form["password"], encoding="utf-8")
-            cenere = bcrypt.hashpw(p, bcrypt.gensalt())
-            entita.passwd = cenere
+            if request.form["password"] != "":
+                p = bytes(request.form["password"], encoding="utf-8")
+                cenere = bcrypt.hashpw(p, bcrypt.gensalt())
+                entita.passwd = cenere
             entita.classe = request.form["classe"]
             entita.telegram_username = request.form["usernameTelegram"]
             entita.emailgenitore = request.form['mailGenitori']
@@ -1048,4 +1049,4 @@ if __name__ == "__main__":
     print("Bot di Telegram avviato!")
     db.session.add(nuovrecord)
     db.session.commit()
-    app.run()
+    app.run(debug=True)
