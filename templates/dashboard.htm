@@ -154,6 +154,7 @@
                                 {% if utente.tipo >= 1 %}
                                     <strong><i class="fa fa-ban" aria-hidden="true"></i></strong> - Elimina il tuo corso
                                 {% endif %}
+                                <br> Se il peer non specifica nulla negli argomenti, la lezione inizia all'ora indicata tra parentesi.
                             </div>
                             <div class="alert alert-info" role="alert">
                                 <strong>Si raccomanda agli studenti di iscriversi entro Domenica</strong>, dato che le
@@ -171,7 +172,7 @@
                                 {% for corso in corsi %}
                                     {% if corso.tipo == 0 %}
                                         <tr>
-                                            <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
+                                            <td>{{ corso.materia.nome }} - {{ corso.materia.professore }} - ({{ corso.materia.ora }})</td>
                                             <td>{{ corso.argomenti }}</td>
                                             <td>
                                                 <div class="progress">

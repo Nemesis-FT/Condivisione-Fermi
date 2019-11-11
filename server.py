@@ -1049,4 +1049,4 @@ if __name__ == "__main__":
     print("Bot di Telegram avviato!")
     db.session.add(nuovrecord)
     db.session.commit()
-    app.run(debug=True)
+    app.run()
