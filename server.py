@@ -919,7 +919,10 @@ def page_lettura_registro(utente):
     with open("./courselog.csv", "r") as csv:
         logs = csv.readlines()
     lock = False
-    return logs
+    stringa = ""
+    for log in logs:
+        stringa += log + "\n"
+    return stringa
 
 
 @app.route('/brasatura/<int:mode>', methods=["GET"])
