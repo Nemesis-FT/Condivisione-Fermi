@@ -909,6 +909,19 @@ def page_ricerca(utente):
                                pagetype="query")
 
 
+@app.route('/lettura_registro')
+@rank_or_403(TipoUtente.ADMIN)
+def page_lettura_registro(utente):
+    global lock
+    while lock:
+        pass
+    lock = True
+    with open("./courselog.csv", "r") as csv:
+        logs = csv.readlines()
+    lock = False
+    return logs
+
+
 @app.route('/brasatura/<int:mode>', methods=["GET"])
 @rank_or_403(TipoUtente.ADMIN)
 def page_brasatura(mode, utente):
