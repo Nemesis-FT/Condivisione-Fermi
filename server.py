@@ -44,6 +44,7 @@ app.secret_key, telegramkey, from_addr, smtp_login, smtp_password, sentry_dsn, R
     8)  # Struttura del file configurazione.txt: appkey|telegramkey|emailcompleta|nomeaccountgmail|passwordemail|dsn|REPuKey|REPrKey|brasamail
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+lock = False
 db = SQLAlchemy(app)
 if sentry_dsn != "":
     client = Client(sentry_dsn)
@@ -488,6 +489,7 @@ def page_peer_inspect(uid, utente):
     return render_template("/User/peerinspect.htm", utente=utente, materielibere=materielibere, peer=peer,
                            autorizzate=autorizzate)
 
+
 @app.route('/peer_del/<int:mid>/<int:uid>')
 @rank_or_403(TipoUtente.ADMIN)
 def page_peer_del(mid, uid, utente):
@@ -499,6 +501,7 @@ def page_peer_del(mid, uid, utente):
     db.session.commit()
     return redirect('/peer_inspect/{}'.format(abilitazione.uid))
 
+
 @app.route('/peer_add/<int:mid>/<int:uid>')
 @rank_or_403(TipoUtente.ADMIN)
 def page_peer_add(mid, uid, utente):
@@ -509,6 +512,7 @@ def page_peer_add(mid, uid, utente):
     db.session.add(nuovabi)
     db.session.commit()
     return redirect('/peer_inspect/{}'.format(uid))
+
 
 @app.route("/peer_remove/<int:uid>")
 @rank_or_403(TipoUtente.ADMIN)
@@ -834,6 +838,26 @@ def page_impegno_del(uid, cid):
         return redirect(url_for('corso_membri', cid=cid))
 
 
+def build_csv(utenti, lezione):
+    global lock
+    # PEER_EMAIL,MATERIA,DATA,U1_EMAIL,U1_PRESENTE,U2_EMAIL,U2_PRESENTE,U3_EMAIL,U3_PRESENTE
+    peer_data = User.query.get_or_404(lezione.pid)
+    materia = Materia.query.get_or_404(lezione.materia_id)
+    data = datetime.today().now()
+    stringa = "{},{},{}".format(peer_data.username, materia.nome, data)
+    for i in range(0, 3, 1):
+        if len(utenti) > i:
+            stringa = stringa + ",{},{}".format(utenti[i][13], str(utenti[i][9]))
+        else:
+            stringa = stringa + ",-,-"
+    while lock:
+        pass
+    lock = True
+    with open("./courselog.csv", "a") as csv:
+        csv.write(stringa + "\n")
+    lock = False
+
+
 @app.route('/inizialezione/<int:cid>')
 @login_or_403
 def page_inizia(cid):
@@ -842,7 +866,7 @@ def page_inizia(cid):
     if utente.tipo < 1 or utente.uid != lezione.pid:
         abort(403)
     query = text(
-        "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
+        "SELECT corso.*, impegno.stud_id, impegno.presente, user.cognome, user.nome, user.emailgenitore, user.username FROM corso JOIN impegno ON corso.cid = impegno.corso_id JOIN user on impegno.stud_id = user.uid WHERE corso.cid=:x;")
     utenti = db.session.execute(query, {"x": cid}).fetchall()
     for utente2 in utenti:
         if utente2[9]:
@@ -853,10 +877,12 @@ def page_inizia(cid):
             oggetto = "Condivisione - Assenza alla lezione"
             mail = "\n\nSuo figlio non e' presente alla lezione di oggi pomeriggio.\nQuesto messaggio e' stato creato automaticamente da Condivisione. Messaggi inviati a questo indirizzo non verranno letti. Per qualsiasi problema, contattare la segreteria."
             sendemail(utente2[12], oggetto, mail)
-    stringa = "L'utente " + utente.username + " ha ELIMINATO il corso " + str(cid)
+
+    stringa = "L'utente " + utente.username + " ha INIZIATO il corso " + str(cid)
     nuovorecord = Log(stringa, datetime.today())
     db.session.add(nuovorecord)
     corso = Corso.query.get_or_404(cid)
+    build_csv(utenti, lezione)
     impegni = Impegno.query.all()
     for impegno in impegni:
         if impegno.corso_id == cid:
@@ -912,7 +938,8 @@ def page_brasatura(mode, utente):
         return redirect(url_for('page_dashboard'))
 
 
-@app.route('/api/peer_request', methods=['POST']) # Questa funzione sarà da rimpiazzare con un sistema che permetta il caricamento da CSV
+@app.route('/api/peer_request',
+           methods=['POST'])  # Questa funzione sarà da rimpiazzare con un sistema che permetta il caricamento da CSV
 def api_peer_request():
     username = request.form.get("username")
     password = request.form.get("password")
