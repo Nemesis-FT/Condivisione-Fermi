@@ -4,7 +4,14 @@ Un sito per permettere la pianificazione di ripetizioni gratuite tra studenti.
 
 È [attualmente utilizzato](https://condivisione.fermi-mo.gov.it/login) 
 dall'[ITIS Enrico Fermi di Modena](https://www.fermi-mo.edu.it/pvw/app/MOIT0016/pvw_sito.php) nelle attività della 
-Peer Education.
+Peer Education. Negli anni, ha aiutato centinaia di studenti gestendo l'erogazione sicura e controllata di videolezioni.
+
+# Caratteristiche principali
+
+* Gestione di corsi di recupero, sia da parte di volontari autorizzati che da parte di docenti.
+* Alte capacità di interazione con gli utenti, sia mediante Telegram che mediante email.
+* Facilmente scalabile ed estendibile a qualsiasi realtà scolastica, a patto che vi sia una pre-esistente struttura di Peer Education presente in loco.
+* Funzionalità di appello: i genitori degli studenti che partecipano alle lezioni vengono sempre informati della presenza (o dell'assenza) dei propri figli.
 
 ## Requisiti
 
@@ -67,13 +74,11 @@ Condivisione-Fermi può essere usato con tutte le opzioni di deployment
 [`apache2` con `mod_wsgi`](https://flask.palletsprojects.com/en/1.1.x/deploying/mod_wsgi/) in quanto essa è la modalità 
 attualmente utilizzata dall'ITIS Fermi.
 
-<!--Potrebbe essere una buona idea aggiungere qui lo script .wsgi attualmente in uso...-->
+Per ulteriori informazioni relative al deployment, si consiglia di fare riferiemento al [manuale](/docs/Manual.pdf).
 
 ## Documentazione
 
-E' disponibile [un manuale (in inglese)](/docs/Manual.pdf) per l'utilizzo di Condivisione-Fermi.
-
-<!--Ci sono altri materiali di documentazione? Magari aggiungili qui e in /docs...-->
+E' disponibile [un manuale (in inglese)](/docs/Manual.pdf) per l'utilizzo di Condivisione-Fermi, il quale è diviso in sezioni a seconda del tipo di utente della piattaforma (dall'utente normale, all'amministratore di sistema).
 
 ## Contributi
 
@@ -90,6 +95,7 @@ Se hai sviluppato una **modifica al software**, puoi
 
 ## Copyright
 
-Condivisione-Fermi è rilasciato sotto la licenza {...}, che prevede {...}.
+Condivisione-Fermi è rilasciato sotto la licenza GNU LGPLv3. Per ulteriori informazioni riguardo la licenza, fare riferimento al 
+[manuale](/docs/Manual.pdf).
 
 -->
