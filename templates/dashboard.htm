@@ -62,7 +62,7 @@
                     </div>
                     <div id="collapseTwo" class="collapse" role="tabpanel" aria-labelledby="headingTwo"
                          data-parent="#accordion">
-                        <div class="card-body card-body-d-m">
+                        <div class="card-body card-body-d-m" style="overflow-x: auto;">
                             <table class="table table-sm">
                                 <thead>
                                 <tr>
@@ -154,53 +154,59 @@
                                 {% if utente.tipo >= 1 %}
                                     <strong><i class="fa fa-ban" aria-hidden="true"></i></strong> - Elimina il tuo corso
                                 {% endif %}
-                                <br> Se il peer non specifica nulla negli argomenti, la lezione inizia all'ora indicata tra parentesi.
+                                <br> Se il peer non specifica nulla negli argomenti, la lezione inizia all'ora indicata
+                                tra parentesi.
                             </div>
                             <div class="alert alert-info" role="alert">
                                 <strong>Si raccomanda agli studenti di iscriversi entro Domenica</strong>, dato che le
                                 prenotazioni all'ultimo minuto non sono garantite!
                             </div>
-                            <table class="table table-sm">
-                                <thead>
-                                <tr>
-                                    <th>Materia</th>
-                                    <th>Argomenti</th>
-                                    <th>Stato</th>
-                                    <th>Azioni</th>
-                                </tr>
-                                </thead>
-                                {% for corso in corsi %}
-                                    {% if corso.tipo == 0 %}
-                                        <tr>
-                                            <td>{{ corso.materia.nome }} - {{ corso.materia.professore }} - ({{ corso.materia.ora }})</td>
-                                            <td>{{ corso.argomenti }}</td>
-                                            <td>
-                                                <div class="progress">
-                                                    <div {% if (corso.occupati/corso.limite)*100 < 50 %}class="progress-bar bg-success"
-                                                         {% elif (corso.occupati/corso.limite)*100 < 75 %}class="progress-bar bg-warning"
-                                                         {% else %}class="progress-bar bg-danger" {% endif %}
-                                                         role="progressbar"
-                                                         style="width: {{ (corso.occupati/corso.limite)*100//1 }}%"
-                                                         aria-valuenow="{{ (corso.occupati//1).__round__() }}"
-                                                         aria-valuemin="0"
-                                                         aria-valuemax="/{{ corso.limite }}">{{ ((corso.occupati/corso.limite)*100//1).__round__() }}%
+                            <div style="overflow-x: auto;">
+                                <table class="table table-sm">
+                                    <thead>
+                                    <tr>
+                                        <th>Materia</th>
+                                        <th>Argomenti</th>
+                                        <th>Stato</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                    </thead>
+                                    {% for corso in corsi %}
+                                        {% if corso.tipo == 0 %}
+                                            <tr>
+                                                <td>{{ corso.materia.nome }} - {{ corso.materia.professore }} -
+                                                    ({{ corso.materia.ora }})
+                                                </td>
+                                                <td>{{ corso.argomenti }}</td>
+                                                <td>
+                                                    <div class="progress">
+                                                        <div {% if (corso.occupati/corso.limite)*100 < 50 %}class="progress-bar bg-success"
+                                                             {% elif (corso.occupati/corso.limite)*100 < 75 %}class="progress-bar bg-warning"
+                                                             {% else %}class="progress-bar bg-danger" {% endif %}
+                                                             role="progressbar"
+                                                             style="width: {{ (corso.occupati/corso.limite)*100//1 }}%"
+                                                             aria-valuenow="{{ (corso.occupati//1).__round__() }}"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="/{{ corso.limite }}">{{ ((corso.occupati/corso.limite)*100//1).__round__() }}%
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td>{% if corso.pid == utente.uid %}
-                                                <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
-                                                                                        aria-hidden="true"></i></a>  {% elif utente.tipo==3 %}
-                                                <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
-                                                                                        aria-hidden="true"></i></a> {% else %}
-                                                <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
-                                                                                         aria-hidden="true"></i></a> {% endif %}
-                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap"
-                                                                                           aria-hidden="true"></i></a>
-                                            </td>
-                                        </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            </table>
+                                                </td>
+                                                <td>{% if corso.pid == utente.uid %}
+                                                    <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
+                                                                                            aria-hidden="true"></i></a>  {% elif utente.tipo==3 %}
+                                                    <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
+                                                                                            aria-hidden="true"></i></a> {% else %}
+                                                    <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
+                                                                                             aria-hidden="true"></i></a> {% endif %}
+                                                    <a href="/user_inspect/{{ corso.pid }}"><i
+                                                            class="fa fa-graduation-cap"
+                                                            aria-hidden="true"></i></a>
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -226,46 +232,49 @@
                                     <strong><i class="fa fa-ban" aria-hidden="true"></i></strong> - Elimina il tuo corso
                                 {% endif %}
                             </div>
-                            <table class="table table-sm">
-                                <thead>
-                                <tr>
-                                    <th>Materia</th>
-                                    <th>Argomenti</th>
-                                    <th>Data</th>
-                                    <th>Stato</th>
-                                    <th>Azioni</th>
-                                </tr>
-                                </thead>
-                                {% for corso in corsi %}
-                                    {% if corso.tipo == 1 %}
-                                        <tr>
-                                            <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
-                                            <td>{{ corso.argomenti }}</td>
-                                            <td>{{ corso.appuntamento }}
-                                            <td>
-                                                <div class="progress">
-                                                    <div class="progress-bar" role="progressbar"
-                                                         style="width: {{ (corso.occupati/corso.limite)*100//1 }}%"
-                                                         aria-valuenow="{{ corso.occupati//1 }}"
-                                                         aria-valuemin="0"
-                                                         aria-valuemax="/{{ corso.limite }}">{{ (corso.occupati/corso.limite)*100//1 }}%
+                            <div style="overflow-x: auto;">
+                                <table class="table table-sm">
+                                    <thead>
+                                    <tr>
+                                        <th>Materia</th>
+                                        <th>Argomenti</th>
+                                        <th>Data</th>
+                                        <th>Stato</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                    </thead>
+                                    {% for corso in corsi %}
+                                        {% if corso.tipo == 1 %}
+                                            <tr>
+                                                <td>{{ corso.materia.nome }} - {{ corso.materia.professore }}</td>
+                                                <td>{{ corso.argomenti }}</td>
+                                                <td>{{ corso.appuntamento }}
+                                                <td>
+                                                    <div class="progress">
+                                                        <div class="progress-bar" role="progressbar"
+                                                             style="width: {{ (corso.occupati/corso.limite)*100//1 }}%"
+                                                             aria-valuenow="{{ corso.occupati//1 }}"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="/{{ corso.limite }}">{{ (corso.occupati/corso.limite)*100//1 }}%
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td>{% if corso.pid == utente.uid %}
-                                                <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
-                                                                                        aria-hidden="true"></i></a>  {% elif utente.tipo==3 %}
-                                                <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
-                                                                                        aria-hidden="true"></i></a> {% else %}
-                                                <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
-                                                                                         aria-hidden="true"></i></a> {% endif %}
-                                                <a href="/user_inspect/{{ corso.pid }}"><i class="fa fa-graduation-cap"
-                                                                                           aria-hidden="true"></i></a>
-                                            </td>
-                                        </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            </table>
+                                                </td>
+                                                <td>{% if corso.pid == utente.uid %}
+                                                    <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
+                                                                                            aria-hidden="true"></i></a>  {% elif utente.tipo==3 %}
+                                                    <a href="/corso_del/{{ corso.cid }}"><i class="fa fa-ban"
+                                                                                            aria-hidden="true"></i></a> {% else %}
+                                                    <a href="/corso_join/{{ corso.cid }}"><i class="fa fa-sign-in"
+                                                                                             aria-hidden="true"></i></a> {% endif %}
+                                                    <a href="/user_inspect/{{ corso.pid }}"><i
+                                                            class="fa fa-graduation-cap"
+                                                            aria-hidden="true"></i></a>
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -297,5 +306,5 @@
         </div>
     </div>
     <br>
-    <center>Versione di Condivisione R 1.30</center>
+    <center>Versione di Condivisione R 1.31</center>
 {% endblock %}

@@ -3,10 +3,13 @@ import smtplib
 
 def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
     try:
-        header = 'From: %s' % from_addr
-        header += 'To: %s' % ','.join(to_addr_list)
-        header += 'Subject: %s' % subject
-        message = header + message
+        email_text = """\
+        From: %s
+        To: %s
+        Subject: %s
+        
+        %s
+        """ % (from_addr, ", ".join(to_addr_list), subject, message)
         server = smtplib.SMTP(smtpserver)
         server.starttls()
         server.login(smtp_login, smtp_password)
@@ -14,7 +17,7 @@ def sendemail(to_addr_list, subject, message, smtpserver='smtp.gmail.com:587'):
         print(problems)
         server.quit()
         return True
-    except Exception:
+    except Exception as e:
         return False
 
 
@@ -26,5 +29,6 @@ email = email_file.readline()
 mail = email.split(";")
 for indirizzo in mail:
     print(indirizzo)
-    successo = sendemail(indirizzo, "Chiusura account", "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio è stato creato automaticamente.")
+    successo = sendemail(indirizzo, "Chiusura account",
+                         "Gentile utente di Condivisione,\nIn vista dell'inizio di un nuovo anno scolastico, la sua utenza su Condivisione e' stata rimossa.\nPer tornare ad usufruire dei servizi di Condivisione, le sara' necessario creare una nuova utenza.\n\nGrazie per aver utilizzato Condivisione!\nQuesto messaggio e' stato creato automaticamente.")
     print(successo)

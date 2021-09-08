@@ -6,7 +6,7 @@ raven[flask]
 blinker
 flask_sqlalchemy
 flask_wtf
-flask
+flask~=2.0.1
 sqlalchemy
 pytest
 tox
