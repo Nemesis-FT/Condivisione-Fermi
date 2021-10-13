@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from condivisione.database.db import SessionLocal
 import aiofiles
 import os
+from sqlalchemy.orm import Session
 
 
 async def get_planetarium_version():

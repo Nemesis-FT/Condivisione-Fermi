@@ -7,7 +7,7 @@ from condivisione.database import schemas, models
 
 
 def get_user(db: Session, uid: int):
-    user = db.query(models.User).filter(models.User.uid == uid).first()
+    user = db.query(models.User).filter(models.User.id == uid).first()
     if not user:
         raise HTTPException(404, "Not found.")
     else:

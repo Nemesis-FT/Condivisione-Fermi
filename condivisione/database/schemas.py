@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, time
 
 from pydantic import BaseModel
 
@@ -47,12 +47,17 @@ class Server(BaseModel):
         orm_mode = True
 
 
+class Day(BaseModel):
+    name: str
+    number: int
+
+
 class Subject(BaseModel):
     id: Optional[int]
     name: str
     teacher: str
-    day_week: str
-    time: datetime
+    day_week: List[Day]
+    time: time
 
     class Config:
         orm_mode = True

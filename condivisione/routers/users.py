@@ -41,16 +41,17 @@ async def read_users_list(user_id: Optional[int] = None, db: Session = Depends(g
 
 
 @router.post("/", tags=["users"], response_model=schemas.User)
-async def create_user_(user: schemas.UserCreatePlain, db: Session = Depends(get_db),):
+async def create_user_(user: schemas.UserCreatePlain, db: Session = Depends(get_db)):
     """
     Allows the creation of a new user
     """
     h = bcrypt.hashpw(bytes(user.password, encoding="utf-8"), bcrypt.gensalt())
     user: models.User = create_user(db,
                                     schemas.UserCreate(name=user.name, surname=user.surname,
-                                                       email=user.email, hash=h))
+                                                       email=user.email, hash=h, parent_email=user.parent_email,
+                                                       type=UserType.DEFAULT.value, class_number=user.class_number))
     if user:
-        return schemas.User(uid=user.uid, name=user.name, surname=user.surname, email=user.email)
+        return user
 
 
 @router.patch("/{user_id}", tags=["users"], response_model=schemas.User)
@@ -67,7 +68,7 @@ async def update_user_(user: schemas.UserCreatePlain, user_id: int, db: Session 
     user_n = update_user(db, schemas.UserCreate(name=user.name, surname=user.surname, hash=h, email=user.email),
                          user_id)
     if user_n:
-        return schemas.User(uid=user_n.uid, name=user_n.name, surname=user_n.surname, email=user_n.email)
+        return user
     raise HTTPException(404, "Not found")
 
 
@@ -75,7 +76,7 @@ async def update_user_(user: schemas.UserCreatePlain, user_id: int, db: Session 
 async def remove_user_(user_id: int, db: Session = Depends(get_db),
                        current_user: models.User = Depends(get_current_user)):
     """Allows admin to remove users. All of their summaries will be given to admin."""
-    if not check_permissions(current_user, level=UserType.ADMIN) or current_user.uid == user_id:
+    if not check_permissions(current_user, level=UserType.ADMIN) or current_user.id == user_id:
         raise HTTPException(403, "You are not authorized.")
     u: models.User = get_user(db, user_id)
     if not u:
