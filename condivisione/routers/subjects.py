@@ -26,10 +26,7 @@ async def read_subjects(db: Session = Depends(get_db)):
     Returns data about the subjects.
     """
     subjects = get_subjects(db)
-    return schemas.SubjectList(subjects=[schemas.Subject(id=s.id, name=s.name, teacher=s.teacher,
-                                                         day_week=[schemas.Day(name=json.loads(d)['name'],
-                                                                               number=json.loads(d)['number']) for d in
-                                                                   s.day_week], time=s.time) for s in subjects])
+    return schemas.SubjectList(subjects=[s.to_schema() for s in subjects])
 
 
 @router.get("/{_id}", response_model=schemas.Subject)
@@ -38,9 +35,7 @@ async def read_subject(_id: int, db: Session = Depends(get_db)):
     Returns data about the selected subject.
     """
     s = get_subject(db, _id)
-    return schemas.Subject(id=s.id, name=s.name, teacher=s.teacher,
-                           day_week=[schemas.Day(name=json.loads(d)['name'],
-                                                 number=json.loads(d)['number']) for d in s.day_week], time=s.time)
+    return s.to_schema()
 
 
 @router.post("/", response_model=schemas.Subject)
@@ -53,9 +48,7 @@ async def forge_subject(subject: schemas.Subject, db: Session = Depends(get_db),
             check_permissions(current_user, level=UserType.ADMIN)):
         raise HTTPException(403)
     s = create_subject(db, subject)
-    return schemas.Subject(id=s.id, name=s.name, teacher=s.teacher,
-                           day_week=[schemas.Day(name=json.loads(d)['name'], number=json.loads(d)['number']) for d in
-                                     s.day_week], time=s.time)
+    return s.to_schema()
 
 
 @router.patch("/{_id}", response_model=schemas.Subject)
@@ -68,9 +61,7 @@ async def forge_subject(_id: int, subject: schemas.Subject, db: Session = Depend
             check_permissions(current_user, level=UserType.ADMIN)):
         raise HTTPException(403)
     s = update_subject(db, _id, subject)
-    return schemas.Subject(id=s.id, name=s.name, teacher=s.teacher,
-                           day_week=[schemas.Day(name=json.loads(d)['name'], number=json.loads(d)['number']) for d in
-                                     s.day_week], time=s.time)
+    return s.to_schema()
 
 
 @router.delete("/{_id}", response_model=schemas.Subject)

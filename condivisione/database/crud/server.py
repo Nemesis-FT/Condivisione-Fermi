@@ -6,17 +6,18 @@ import bcrypt
 from condivisione.database import schemas, models
 
 
-def get_server(db: Session):
+def get_server(db: Session) -> models.Server:
     return db.query(models.Server).first()
 
 
-def create_server(db: Session):
+def create_server(db: Session) -> models.Server:
     server = models.Server(name="Condivisione", school="Ignota", custom_logo="Condivisione.png")
     db.add(server)
     db.commit()
+    return server
 
 
-def update_server(db: Session, update: schemas.Server):
+def update_server(db: Session, update: schemas.Server) -> models.Server:
     absent = False
     server: models.Server = get_server(db)
     if not server:

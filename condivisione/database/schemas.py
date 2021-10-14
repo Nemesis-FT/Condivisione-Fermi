@@ -4,6 +4,22 @@ from datetime import datetime, time
 from pydantic import BaseModel
 
 
+class Day(BaseModel):
+    name: str
+    number: int
+
+
+class Subject(BaseModel):
+    id: Optional[int]
+    name: str
+    teacher: str
+    day_week: List[Day]
+    time: time
+
+    class Config:
+        orm_mode = True
+
+
 class User(BaseModel):
     id: Optional[int]
     name: str
@@ -12,13 +28,15 @@ class User(BaseModel):
     parent_email: str
     class_number: str
     type: int
+    granted_subjects: Optional[List[Subject]]
+    # Todo : add bookings
 
     class Config:
         orm_mode = True
 
 
 class UserList(BaseModel):
-    users: List[User]
+    users: Optional[List[User]]
 
 
 class UserCreatePlain(User):
@@ -47,24 +65,8 @@ class Server(BaseModel):
         orm_mode = True
 
 
-class Day(BaseModel):
-    name: str
-    number: int
-
-
-class Subject(BaseModel):
-    id: Optional[int]
-    name: str
-    teacher: str
-    day_week: List[Day]
-    time: time
-
-    class Config:
-        orm_mode = True
-
-
 class SubjectList(BaseModel):
-    subjects: List[Subject]
+    subjects: Optional[List[Subject]]
 
 
 class Appointment(BaseModel):
@@ -83,6 +85,7 @@ class Course(BaseModel):
     type: int
     date: datetime
     free_slots: int
+    open: bool
     host: Optional[User]
     subject: Optional[Subject]
 
@@ -95,7 +98,7 @@ class CourseDetails(Course):
 
 
 class CourseList(BaseModel):
-    courses: List[Course]
+    courses: Optional[List[Course]]
 
 
 class Message(BaseModel):

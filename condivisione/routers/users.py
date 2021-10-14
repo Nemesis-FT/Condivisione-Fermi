@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 
 from condivisione.dependencies import get_auth_token, get_db
 from condivisione.authentication import get_current_user, check_permissions
-from condivisione.database.crud.users import get_users, create_user, get_user, update_user
+from condivisione.database.crud.users import get_users, create_user, get_user, update_user, add_grant, remove_grant
 from sqlalchemy.orm import Session
 from condivisione.database import schemas, models
 from condivisione.enums import UserType
@@ -84,3 +84,22 @@ async def remove_user_(user_id: int, db: Session = Depends(get_db),
     db.delete(u)
     db.commit()
     return HTTPException(204, "User removed.")
+
+
+@router.post("/{user_id}/grant/{subject_id}", tags=["users", "grants"])
+async def grant_user(user_id: int, subject_id:int, db: Session = Depends(get_db),
+                     current_user: models.User = Depends(get_current_user)):
+    """
+    Allows admin to grant subject to a user
+    """
+    return add_grant(db, user_id, subject_id, current_user)
+
+
+@router.delete("/{user_id}/grant/{subject_id}", tags=["users", "grants"])
+async def remove_grant_user(user_id: int, subject_id:int, db: Session = Depends(get_db),
+                            current_user: models.User = Depends(get_current_user)):
+    """
+    Allows admin to remove subject to a user
+    """
+    remove_grant(db, user_id, subject_id, current_user)
+    return HTTPException(204)
