@@ -52,8 +52,8 @@ async def forge_subject(subject: schemas.Subject, db: Session = Depends(get_db),
 
 
 @router.patch("/{_id}", response_model=schemas.Subject)
-async def forge_subject(_id: int, subject: schemas.Subject, db: Session = Depends(get_db),
-                        current_user: models.User = Depends(get_current_user)):
+async def update_subject(_id: int, subject: schemas.Subject, db: Session = Depends(get_db),
+                         current_user: models.User = Depends(get_current_user)):
     """
     Updates the selected subject.
     """

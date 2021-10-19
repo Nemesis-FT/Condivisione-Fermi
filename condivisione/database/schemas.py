@@ -112,6 +112,10 @@ class Message(BaseModel):
         orm_mode = True
 
 
+class MessageList(BaseModel):
+    messages: List[Message]
+
+
 class Planetarium(BaseModel):
     server: Server
     version: str

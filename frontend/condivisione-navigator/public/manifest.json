@@ -1,0 +1,29 @@
+{
+  "short_name": "Erre2-Navi",
+  "name": "Erre2 Navigator",
+  "description": "Erre2.0 Navigation webapp",
+  "author": "Fermitech Softworks",
+  "license": "GPL V3",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#e1500b",
+  "orientation": "portrait",
+  "background_color": "#272121"
+}

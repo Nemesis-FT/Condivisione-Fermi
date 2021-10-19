@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
 
 from condivisione.database.crud.server import create_server
-from condivisione.routers import users, server, subjects, courses
+from condivisione.routers import users, server, subjects, courses, messages
 from condivisione.database import schemas, models
 from condivisione.database.crud.users import create_user
 from condivisione.dependencies import get_db
@@ -24,6 +24,7 @@ app.include_router(users.router)
 app.include_router(server.router)
 app.include_router(subjects.router)
 app.include_router(courses.router)
+app.include_router(messages.router)
 
 origins = [
     "https://frontend.address.com",
