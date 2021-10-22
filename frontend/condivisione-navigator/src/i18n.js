@@ -33,7 +33,34 @@ i18n
                     },
                     status_msgs: {
                         checking: "Checking..."
+                    },
+                    login_page: {
+                        message: "To proceed, please provide your Condivisione credentials." +
+                            " If you're not signed up, you can create an account for free.",
+                        login_button: "Login",
+                        legal_notice: "Sign up must be done by users older than 13. If the user is underage, this action must be approved by parent or tutor.",
+                        labels: {
+                            email: "Email",
+                            password: "Password",
+                            name: "Name",
+                            surname: "Surname",
+                            class_name: "Class number",
+                            personal_email: "User's email",
+                            parent_email: "Parent's email",
+                            confirm_password: "Confirm password"
+                        },
+                        register_button: "Sign up",
+                    },
+                    not_found: {
+                        message1: "You've lost yourself while exploring the constellation.",
+                        message2: "The navigator can't help you with finding something that does not exist.",
+                        message3: "Head back to the start",
+                    },
+                    alerts:{
+                        login_error: "Incorrect credentials.",
+                        register_success: "Sign up successful.",
                     }
+
                 }
             },
             it: {
@@ -56,7 +83,33 @@ i18n
                         instance_address: "Indirizzo istanza"
                     },
                     status_msgs: {
-                        checking: "Verifica..."
+                        checking: "Verifica in corso..."
+                    },
+                    login_page: {
+                        message: "Per proseguire, inserisci le tue credenziali di Condivisione." +
+                            " Se non sei in possesso di un account, creane uno gratuitamente.",
+                        login_button: "Accedi",
+                        legal_notice: "La registrazione deve venire effettuata da utenti maggiori di 13 anni, nel caso siano minorenni previa approvazione di un genitore o tutore.",
+                        labels: {
+                            email: "Email",
+                            password: "Password",
+                            name: "Nome",
+                            surname: "Cognome",
+                            class_name: "Classe",
+                            personal_email: "Email personale",
+                            parent_email: "Email genitore",
+                            confirm_password: "Conferma password"
+                        },
+                        register_button: "Registrati",
+                    },
+                    not_found: {
+                        message1: "Ti sei perso durante l'esplorazione della costellazione.",
+                        message2: "Il navigatore non può aiutarti a trovare qualcosa che non esiste.",
+                        message3: "Torna alla schermata iniziale",
+                    },
+                    alerts:{
+                        login_error: "Credenziali non corrette.",
+                        register_success: "Account creato con successo.",
                     }
                 }
             }

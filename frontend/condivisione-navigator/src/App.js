@@ -11,6 +11,8 @@ import {faLanguage} from "@fortawesome/free-solid-svg-icons";
 
 function App() {
     const [instanceIp, setInstanceIp] = useState("");
+    const [user, setUser] = useState(null);
+    const [instanceData, setInstanceData] = useState(null);
     const [connected, setConnected] = useState(false);
     const [token, setToken] = useState("")
     const [hidden, setHidden] = useState(true)
@@ -55,14 +57,13 @@ function App() {
         <Bluelib theme={"amber"} backgroundColor={"#112031"} accentColor={"#D4ECDD"} foregroundColor={"#93B5C6"}>
             <meta name="viewport" content="width=device-width, initial-scale=1"/>
             <div className="App">
-                <AppContext.Provider value={{instanceIp, setInstanceIp, connected, setConnected, token, setToken}}>
+                <AppContext.Provider value={{instanceIp, setInstanceIp, connected, setConnected, token, setToken, instanceData, setInstanceData, user, setUser}}>
                     <Routes/>
 
 
                 </AppContext.Provider>
 
                 <div className="Fermitech-Footer">
-                    <Panel>
                     <div>
                         <Button onClick={(e) => {
                             setHidden(!hidden)
@@ -78,7 +79,6 @@ function App() {
                         </div>)}
 
                     </div>
-                    </Panel>
                     <Footer><p>{t('footer.line1')}</p> {t('footer.line2')} <a href={"https://github.com/Steffo99/bluelib-react"}>bluelib-react</a> {t('footer.line3')}
                     </Footer>
                 </div>

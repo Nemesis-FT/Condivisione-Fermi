@@ -1,22 +1,27 @@
 import React, {useEffect, useState} from "react";
 import Style from "./Homepage.module.css";
-import {Anchor, Box, Button, Chapter, Heading, Panel} from "@steffo/bluelib-react";
+import {Anchor, Box, Button, Chapter, Details, Dialog, Heading, Panel} from "@steffo/bluelib-react";
 import {useAppContext} from "../../libs/Context";
 import {useHistory, useParams} from "react-router-dom";
-import {faStar} from "@fortawesome/free-solid-svg-icons";
+import {faBackward, faDoorClosed, faStar} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import schema from "../config";
+import Login from "./Login.js";
+import Register from "./Register";
+import {useTranslation} from "react-i18next";
 
 
 export default function Home() {
     const {url} = useParams();
     const {instanceIp, setInstanceIp} = useAppContext()
+    const {instance, setInstanceData} = useAppContext()
     const {connected, setConnected} = useAppContext()
     const [server, setServer] = useState(null)
     const [showInfo, setShowInfo] = useState(false)
     const [isFav, setIsFav] = useState(false)
     const [channelLink, setChannelLink] = useState("null")
     let history = useHistory();
+    let { t } = useTranslation()
 
     useEffect(() => {
         if (instanceIp !== url) {
@@ -61,6 +66,7 @@ export default function Home() {
             console.debug(values)
             setServer(values)
             console.debug(server)
+            setInstanceData(values.server)
         }
     }
 
@@ -72,7 +78,7 @@ export default function Home() {
     }
 
     async function addFav() {
-        let el = {name: server.server.name, address: instanceIp, university: server.server.university}
+        let el = {name: server.server.name, address: instanceIp, school: server.server.school}
         if (localStorage.getItem("favs")) {
             console.debug("Favs are present!")
             let favs = JSON.parse(localStorage.getItem("favs"))
@@ -97,21 +103,25 @@ export default function Home() {
                 <div className={Style.Home}>
                     <div className={Style.lander}>
                         <Heading level={1}>{server.server.name}
-                            {!isFav ? (<FontAwesomeIcon
-                                icon={faStar} onClick={e => addFav()}/>) : (<div/>)}
+
                         </Heading>
-                        <p className="text-muted">{server.server.university}</p>
+                        <p className="text-muted">{server.server.school} </p>
                     </div>
-                    <Panel>
-                        <Chapter>
-                            <div>
-                                <Button children={"Accedi"} onClick={e => history.push("/login")}></Button>
-                            </div>
-                            <div>
-                                <Button children={"Disconnettiti"} onClick={e => disconnect()}></Button>
-                            </div>
-                        </Chapter>
-                    </Panel>
+                    <Dialog>{t("login_page.message")}</Dialog>
+                    <Chapter>
+                        {!isFav ? (
+                        <div>
+                            <Button onClick={e => addFav()}><FontAwesomeIcon
+                                icon={faStar}/> </Button>
+                        </div>) : (<div/>)}
+
+                            <Button onClick={e => disconnect()}><FontAwesomeIcon icon={faDoorClosed}/></Button>
+
+                    </Chapter>
+                    <Login/>
+                    <Details summary={"Register"}>
+                        <Register/>
+                    </Details>
                 </div>
 
             ) : (

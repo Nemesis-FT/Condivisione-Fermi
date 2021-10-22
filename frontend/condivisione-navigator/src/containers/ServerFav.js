@@ -17,7 +17,7 @@ export default function ServerFav(props) {
     return (
         <Panel>
             <Chapter>
-                <div><Anchor href={"/srv/" + props.fav.address}>{props.fav.name}</Anchor><br/>({props.fav.university})</div>
+                <div><Anchor href={"/srv/" + props.fav.address}>{props.fav.name}</Anchor><br/>({props.fav.school})</div>
                 <Button onClick={e => remove()}><FontAwesomeIcon icon={faTrash}/></Button>
             </Chapter>
         </Panel>

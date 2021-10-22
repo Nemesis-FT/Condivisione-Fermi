@@ -4,6 +4,7 @@ import Home from "./containers/Home"
 import Homepage from "./containers/Instance/Homepage";
 import NotFound from "./containers/NotFound";
 import Resume from "./containers/Resume";
+import Dashboard from "./containers/Instance/Dashboard";
 
 export default function Routes() {
     return (
@@ -14,6 +15,7 @@ export default function Routes() {
                 </Route>
                 <Route exact path ="/srv" children={<Resume/>}/>
                 <Route exact path ="/srv/:url" children={<Homepage/>}/>
+                <Route exact path ="/dashboard" children={<Dashboard/>}/>
                 <Route>
                     <NotFound/>
                 </Route>
